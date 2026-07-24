@@ -43,8 +43,16 @@ public static class ObservabilityExtensions
                     {
                         options.RecordException = true;
                     })
-                    .AddSource(serviceName)
-                    .AddConsoleExporter();
+                    .AddSource(serviceName);
+
+                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+                {
+                    tracing.AddOtlpExporter(opt => opt.Endpoint = new Uri(otlpEndpoint));
+                }
+                else
+                {
+                    tracing.AddConsoleExporter();
+                }
             })
             .WithMetrics(metrics =>
             {
@@ -52,10 +60,15 @@ public static class ObservabilityExtensions
                     .SetResourceBuilder(resourceBuilder)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation()
-                    .AddConsoleExporter();
+                    .AddRuntimeInstrumentation();
+
+                if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+                {
+                    metrics.AddOtlpExporter(opt => opt.Endpoint = new Uri(otlpEndpoint));
+                }
             });
 
         return services;
     }
 }
+
