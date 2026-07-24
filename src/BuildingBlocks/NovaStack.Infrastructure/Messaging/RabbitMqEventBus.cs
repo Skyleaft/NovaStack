@@ -14,19 +14,20 @@ public sealed class RabbitMqEventBus : IEventBus, IDisposable
 {
     private readonly RabbitMqOptions _options;
     private IConnection? _connection;
-    private IModel? _channel;
-    private readonly object _lock = new();
+    private IChannel? _channel;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     public RabbitMqEventBus(IOptions<MessagingOptions> options)
     {
         _options = options.Value.RabbitMQ;
     }
 
-    private void EnsureConnectionAndChannel()
+    private async Task EnsureConnectionAndChannelAsync(CancellationToken ct = default)
     {
         if (_channel is { IsOpen: true }) return;
 
-        lock (_lock)
+        await _semaphore.WaitAsync(ct);
+        try
         {
             if (_channel is { IsOpen: true }) return;
 
@@ -39,8 +40,12 @@ public sealed class RabbitMqEventBus : IEventBus, IDisposable
                 Password = _options.Password
             };
 
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
+            _connection = await factory.CreateConnectionAsync(ct);
+            _channel = await _connection.CreateChannelAsync(cancellationToken: ct);
+        }
+        finally
+        {
+            _semaphore.Release();
         }
     }
 
@@ -50,10 +55,10 @@ public sealed class RabbitMqEventBus : IEventBus, IDisposable
         return PublishAsync(integrationEvent, null, ct);
     }
 
-    public Task PublishAsync<T>(T integrationEvent, string? topicOrExchange, CancellationToken ct = default) 
+    public async Task PublishAsync<T>(T integrationEvent, string? topicOrExchange, CancellationToken ct = default) 
         where T : class, IIntegrationEvent
     {
-        EnsureConnectionAndChannel();
+        await EnsureConnectionAndChannelAsync(ct);
 
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(integrationEvent));
 
@@ -61,28 +66,33 @@ public sealed class RabbitMqEventBus : IEventBus, IDisposable
         var targetName = topicOrExchange ?? typeof(T).Name;
 
         // Declare queue first to ensure it exists if there's no exchange setup yet
-        _channel!.QueueDeclare(
+        await _channel!.QueueDeclareAsync(
             queue: targetName,
             durable: true,
             exclusive: false,
             autoDelete: false,
-            arguments: null);
+            arguments: null,
+            cancellationToken: ct);
 
-        var properties = _channel.CreateBasicProperties();
-        properties.Persistent = true;
+        var properties = new BasicProperties
+        {
+            Persistent = true
+        };
 
-        _channel.BasicPublish(
+        await _channel.BasicPublishAsync(
             exchange: string.Empty,
             routingKey: targetName,
+            mandatory: false,
             basicProperties: properties,
-            body: body);
-
-        return Task.CompletedTask;
+            body: body,
+            cancellationToken: ct);
     }
 
     public void Dispose()
     {
         _channel?.Dispose();
         _connection?.Dispose();
+        _semaphore.Dispose();
     }
 }
+

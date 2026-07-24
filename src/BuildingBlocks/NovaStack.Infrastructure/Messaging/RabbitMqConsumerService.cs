@@ -23,7 +23,7 @@ public sealed class RabbitMqConsumerService<TEvent, THandler> : BackgroundServic
     private readonly RabbitMqOptions _options;
     private readonly string _queueName;
     private IConnection? _connection;
-    private IModel? _channel;
+    private IChannel? _channel;
 
     public RabbitMqConsumerService(
         IServiceProvider serviceProvider,
@@ -37,7 +37,7 @@ public sealed class RabbitMqConsumerService<TEvent, THandler> : BackgroundServic
         _queueName = queueName;
     }
 
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
@@ -50,20 +50,21 @@ public sealed class RabbitMqConsumerService<TEvent, THandler> : BackgroundServic
                 Password = _options.Password
             };
 
-            _connection = factory.CreateConnection();
-            _channel = _connection.CreateModel();
+            _connection = await factory.CreateConnectionAsync(stoppingToken);
+            _channel = await _connection.CreateChannelAsync(cancellationToken: stoppingToken);
 
-            _channel.QueueDeclare(
+            await _channel.QueueDeclareAsync(
                 queue: _queueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
-                arguments: null);
+                arguments: null,
+                cancellationToken: stoppingToken);
 
-            _channel.BasicQos(0, _options.PrefetchCount, false);
+            await _channel.BasicQosAsync(0, _options.PrefetchCount, false, stoppingToken);
 
-            var consumer = new EventingBasicConsumer(_channel);
-            consumer.Received += async (sender, args) =>
+            var consumer = new AsyncEventingBasicConsumer(_channel);
+            consumer.ReceivedAsync += async (sender, args) =>
             {
                 var bodyBytes = args.Body.ToArray();
                 var bodyText = Encoding.UTF8.GetString(bodyBytes);
@@ -80,20 +81,21 @@ public sealed class RabbitMqConsumerService<TEvent, THandler> : BackgroundServic
                         await handler.HandleAsync(integrationEvent, stoppingToken);
                     }
 
-                    _channel.BasicAck(args.DeliveryTag, false);
+                    await _channel.BasicAckAsync(args.DeliveryTag, false, stoppingToken);
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error processing RabbitMQ message on queue {Queue}", _queueName);
                     // Nack and requeue
-                    _channel.BasicNack(args.DeliveryTag, false, requeue: true);
+                    await _channel.BasicNackAsync(args.DeliveryTag, false, requeue: true, cancellationToken: stoppingToken);
                 }
             };
 
-            _channel.BasicConsume(
+            await _channel.BasicConsumeAsync(
                 queue: _queueName,
                 autoAck: false,
-                consumer: consumer);
+                consumer: consumer,
+                cancellationToken: stoppingToken);
 
             _logger.LogInformation("Started RabbitMQ consumer background service on queue {Queue}", _queueName);
         }
@@ -101,8 +103,6 @@ public sealed class RabbitMqConsumerService<TEvent, THandler> : BackgroundServic
         {
             _logger.LogError(ex, "Failed to start RabbitMQ consumer service on queue {Queue}", _queueName);
         }
-
-        return Task.CompletedTask;
     }
 
     public override void Dispose()
@@ -112,3 +112,4 @@ public sealed class RabbitMqConsumerService<TEvent, THandler> : BackgroundServic
         base.Dispose();
     }
 }
+
