@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NovaStack", "NovaStack\NovaStack.csproj", "{B344C8FC-0C24-4600-A9D8-D473032F456C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{BA29C038-B394-4426-977A-E6438D215434}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BuildingBlocks", "BuildingBlocks", "{89498199-672B-41E3-A739-C093A0DB83E1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SharedKernel", "SharedKernel", "{478BEB17-31BB-4936-86C1-C98029D5F000}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{48310F01-580A-4B0B-A6E9-E33CB1111AB9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B344C8FC-0C24-4600-A9D8-D473032F456C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B344C8FC-0C24-4600-A9D8-D473032F456C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B344C8FC-0C24-4600-A9D8-D473032F456C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B344C8FC-0C24-4600-A9D8-D473032F456C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{478BEB17-31BB-4936-86C1-C98029D5F000} = {89498199-672B-41E3-A739-C093A0DB83E1}
+		{48310F01-580A-4B0B-A6E9-E33CB1111AB9} = {89498199-672B-41E3-A739-C093A0DB83E1}
+	EndGlobalSection
+EndGlobal
