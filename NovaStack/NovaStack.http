@@ -1,6 +1,0 @@
-@NovaStack_HostAddress = http://localhost:5072
-
-GET {{NovaStack_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

@@ -1,4 +1,3 @@
-<![CDATA[<div align="center">
 
 # 🚀 NovaStack
 
@@ -10,7 +9,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)](#)
 
-</div>
 
 ---
 
@@ -172,7 +170,7 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 
 Each feature is self-contained in a folder. No cross-cutting shared layers — only shared *infrastructure*.
 
-```
+```text
 Features/
 └── Products/
     ├── CreateProduct/
@@ -211,7 +209,7 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
 
 ### MediatR Pipeline
 
-```
+```text
 Request → LoggingBehavior → ValidationBehavior → Handler → Response
 ```
 
@@ -339,4 +337,4 @@ This project is licensed under the [MIT License](LICENSE).
 Built with ❤️ using **.NET 10** and **Vertical Slice Architecture**
 
 </div>
-]]>
+
