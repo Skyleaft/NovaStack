@@ -1,4 +1,5 @@
-using MassTransit;
+using NovaStack.Contracts.IntegrationEvents;
+using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Messaging.Options;
 using Notification.Consumer.Consumers;
@@ -13,39 +14,27 @@ try
     var builder = Host.CreateApplicationBuilder(args);
     builder.Logging.ClearProviders();
 
+    // ── Native Messaging ──────────────────────────────────────────────────────
     var messagingOptions = builder.Configuration
         .GetSection(MessagingOptions.SectionName)
         .Get<MessagingOptions>() ?? new MessagingOptions();
 
-    builder.Services.AddMassTransit(bus =>
+    builder.Services.Configure<MessagingOptions>(
+        builder.Configuration.GetSection(MessagingOptions.SectionName));
+
+    builder.Services.AddScoped<NotificationConsumer>();
+
+    if (messagingOptions.Provider == MessagingProvider.RabbitMQ)
     {
-        bus.SetKebabCaseEndpointNameFormatter();
-        bus.AddConsumer<NotificationConsumer>();
-
-        switch (messagingOptions.Provider)
-        {
-            case MessagingProvider.RabbitMQ:
-                bus.UsingRabbitMq((ctx, cfg) =>
-                {
-                    var rabbit = messagingOptions.RabbitMQ;
-                    cfg.Host(rabbit.Host, rabbit.Port, rabbit.VirtualHost, h =>
-                    {
-                        h.Username(rabbit.Username);
-                        h.Password(rabbit.Password);
-                    });
-                    cfg.ReceiveEndpoint("notification-queue", e =>
-                    {
-                        e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
-                        e.ConfigureConsumer<NotificationConsumer>(ctx);
-                    });
-                });
-                break;
-
-            default:
-                bus.UsingInMemory((ctx, cfg) => cfg.ConfigureEndpoints(ctx));
-                break;
-        }
-    });
+        builder.Services.AddRabbitMqConsumer<ProductCreatedIntegrationEvent, NotificationConsumer>(
+            "notification-queue");
+    }
+    else if (messagingOptions.Provider == MessagingProvider.Kafka)
+    {
+        builder.Services.AddKafkaConsumer<ProductCreatedIntegrationEvent, NotificationConsumer>(
+            "product-created",
+            messagingOptions.Kafka.GroupId);
+    }
 
     var host = builder.Build();
     await host.RunAsync();

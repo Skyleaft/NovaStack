@@ -1,6 +1,6 @@
-using MassTransit;
 using Microsoft.Extensions.Logging;
 using NovaStack.Contracts.IntegrationEvents;
+using NovaStack.Infrastructure.Messaging;
 
 namespace Notification.Consumer.Consumers;
 
@@ -9,15 +9,13 @@ namespace Notification.Consumer.Consumers;
 /// Extend this consumer to handle multiple notification event types.
 /// </summary>
 public sealed class NotificationConsumer(ILogger<NotificationConsumer> logger)
-    : IConsumer<ProductCreatedIntegrationEvent>
+    : IIntegrationEventHandler<ProductCreatedIntegrationEvent>
 {
-    public async Task Consume(ConsumeContext<ProductCreatedIntegrationEvent> context)
+    public async Task HandleAsync(ProductCreatedIntegrationEvent integrationEvent, CancellationToken ct = default)
     {
-        var message = context.Message;
-
         logger.LogInformation(
             "[NotificationConsumer] Product created notification. ProductId={ProductId}, Name={Name}",
-            message.ProductId, message.Name);
+            integrationEvent.ProductId, integrationEvent.Name);
 
         // TODO: Dispatch notifications via your preferred channel:
         // - Email (SendGrid, SMTP)

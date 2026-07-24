@@ -21,7 +21,7 @@
 | **API style** | ASP.NET Core Minimal API |
 | **Database (multi)** | EF Core 10 — PostgreSQL or SQL Server (config-driven) |
 | **Complex Queries** | Dapper — high performance read-only queries (config-driven) |
-| **Messaging (multi)** | MassTransit 9 — RabbitMQ or Kafka (config-driven) |
+| **Messaging (multi)** | Native Clients (RabbitMQ.Client, Confluent.Kafka) (config-driven) |
 | **Outbox pattern** | Domain events → outbox table via EF Core interceptor |
 | **Validation** | FluentValidation in MediatR pipeline |
 | **Object Mapping** | Mapster — high-performance object mapping |
@@ -48,7 +48,7 @@ NovaStack/
 │   └── Services/
 │       ├── Product.Domain/                # Aggregate, ValueObjects, Domain Events, Repository interface
 │       ├── Product.Application/           # CQRS vertical slices, pipeline behaviors, endpoint definitions
-│       ├── Product.Infrastructure/        # EF Core DbContext, Repository impl, MassTransit wiring
+│       ├── Product.Infrastructure/        # EF Core DbContext, Repository impl, Native Messaging wiring
 │       └── Product.Api/                   # Minimal API host, composition root, Dockerfile
 │
 ├── src/Workers/
@@ -365,9 +365,8 @@ Set `Observability__OtlpEndpoint=http://jaeger:4317` in your environment.
 | `Mapster` | 10.x | High-performance object mapping |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.x | PostgreSQL provider |
 | `Microsoft.EntityFrameworkCore.SqlServer` | 10.x | SQL Server provider |
-| `MassTransit` | 9.x | Message bus abstraction |
-| `MassTransit.RabbitMQ` | 9.x | RabbitMQ transport |
-| `MassTransit.Kafka` | 9.x | Kafka transport |
+| `RabbitMQ.Client` | 7.x | Native RabbitMQ client |
+| `Confluent.Kafka` | 2.x | Native Kafka client |
 | `Serilog.AspNetCore` | 10.x | Structured logging |
 | `OpenTelemetry.Extensions.Hosting` | 1.x | OTel SDK |
 | `Testcontainers.PostgreSql` | 4.x | Integration test DB |

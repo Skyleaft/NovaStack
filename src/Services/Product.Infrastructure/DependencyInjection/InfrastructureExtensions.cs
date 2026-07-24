@@ -1,7 +1,8 @@
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NovaStack.Infrastructure.DependencyInjection;
+using NovaStack.Infrastructure.Messaging;
 using NovaStack.Infrastructure.Messaging.Options;
 using NovaStack.Infrastructure.Persistence;
 using NovaStack.Infrastructure.Persistence.Options;
@@ -92,7 +93,7 @@ public static class InfrastructureExtensions
         return services;
     }
 
-    // ── Messaging (MassTransit) ───────────────────────────────────────────
+    // ── Messaging (Native Clients) ───────────────────────────────────────────
     private static IServiceCollection AddProductMessaging(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -104,41 +105,20 @@ public static class InfrastructureExtensions
         services.Configure<MessagingOptions>(
             configuration.GetSection(MessagingOptions.SectionName));
 
-        services.AddMassTransit(bus =>
+        switch (messagingOptions.Provider)
         {
-            bus.SetKebabCaseEndpointNameFormatter();
+            case MessagingProvider.RabbitMQ:
+                services.AddNativeRabbitMqEventBus();
+                break;
 
-            switch (messagingOptions.Provider)
-            {
-                case MessagingProvider.RabbitMQ:
-                    bus.UsingRabbitMq((ctx, cfg) =>
-                    {
-                        var rabbit = messagingOptions.RabbitMQ;
-                        cfg.Host(rabbit.Host, rabbit.Port, rabbit.VirtualHost, h =>
-                        {
-                            h.Username(rabbit.Username);
-                            h.Password(rabbit.Password);
-                        });
-                        cfg.ConfigureEndpoints(ctx);
-                    });
-                    break;
+            case MessagingProvider.Kafka:
+                services.AddNativeKafkaEventBus();
+                break;
 
-                case MessagingProvider.Kafka:
-                    bus.UsingInMemory((ctx, cfg) => cfg.ConfigureEndpoints(ctx));
-                    bus.AddRider(rider =>
-                    {
-                        rider.UsingKafka((ctx, k) =>
-                        {
-                            k.Host(messagingOptions.Kafka.BootstrapServers);
-                        });
-                    });
-                    break;
-
-                default:
-                    bus.UsingInMemory((ctx, cfg) => cfg.ConfigureEndpoints(ctx));
-                    break;
-            }
-        });
+            default:
+                services.AddNativeRabbitMqEventBus();
+                break;
+        }
 
         return services;
     }
