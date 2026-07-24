@@ -3,6 +3,7 @@ using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
 using Product.Application.DependencyInjection;
 using Product.Infrastructure.DependencyInjection;
+using Scalar.AspNetCore;
 using Serilog;
 
 // ── Bootstrap logger (captures startup errors) ───────────────────────────────
@@ -65,8 +66,7 @@ try
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi(); // Access via /openapi/v1.json
-        // Optional: add Scalar UI with: dotnet add package Scalar.AspNetCore
-        // app.MapScalarApiReference();
+        app.MapScalarApiReference();
     }
 
     app.UseHttpsRedirection();
@@ -83,6 +83,17 @@ try
 
     // ── Auto-migrate ─────────────────────────────────────────────────────────
     await app.Services.MigrateProductDatabaseAsync();
+
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        var urls = string.Join(", ", app.Urls);
+        Log.Information("Application is running on: {Urls}", urls);
+        if (app.Environment.IsDevelopment())
+        {
+            var firstUrl = app.Urls.FirstOrDefault() ?? "http://localhost:5191";
+            Log.Information("Scalar API reference available at: {Url}/scalar/v1", firstUrl.TrimEnd('/'));
+        }
+    });
 
     app.Run();
 }

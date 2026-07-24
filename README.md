@@ -87,8 +87,11 @@ cd src/Services/Product.Api
 dotnet run
 ```
 
-API is available at `http://localhost:5000`  
-OpenAPI spec: `http://localhost:5000/openapi/v1.json`
+API is available at:
+- **Local (.NET CLI)**: `http://localhost:5191` (Scalar UI: `http://localhost:5191/scalar/v1`)
+- **Docker Compose**: `http://localhost:5000` (Scalar UI: `http://localhost:5000/scalar/v1`)
+
+OpenAPI spec: `/openapi/v1.json`
 
 ### 3. Run everything via Docker
 
@@ -164,6 +167,7 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 | `GET` | `/api/v1/products/stock-report` | Stock statistics/low-stock report (Dapper example) |
 | `GET` | `/health` | Health check |
 | `GET` | `/openapi/v1.json` | OpenAPI spec (Development only) |
+| `GET` | `/scalar/v1` | Scalar API Interactive UI (Development only) |
 
 ---
 
@@ -333,16 +337,12 @@ The `docker-compose.yml` brings up the full stack:
 3. Register `IEndpointDefinition` implementations in the new API's `Program.cs`
 4. Add to `docker-compose.yml`
 
-### Add Scalar API UI
+### Scalar API UI Integration
 
-```bash
-dotnet add src/Services/Product.Api package Scalar.AspNetCore
-```
+Scalar API interactive documentation is integrated into the API host projects out-of-the-box:
 
-```csharp
-// In Program.cs
-app.MapScalarApiReference();
-```
+- **Interactive UI**: `http://localhost:5191/scalar/v1` (Local) or `http://localhost:5000/scalar/v1` (Docker)
+- Powered by `Scalar.AspNetCore` mapped inside `Program.cs`.
 
 ### Add OTLP export (Jaeger / Grafana Tempo)
 
