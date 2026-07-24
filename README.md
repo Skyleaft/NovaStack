@@ -24,6 +24,7 @@
 | **Messaging (multi)** | MassTransit 9 — RabbitMQ or Kafka (config-driven) |
 | **Outbox pattern** | Domain events → outbox table via EF Core interceptor |
 | **Validation** | FluentValidation in MediatR pipeline |
+| **Object Mapping** | Mapster — high-performance object mapping |
 | **Error handling** | Railway-oriented `Result<T>` — no exceptions for domain flow |
 | **Caching** | In-memory or Redis (config-driven) |
 | **Auth** | JWT Bearer |
@@ -221,6 +222,34 @@ public class GetProductStockReportQueryHandler(ISqlConnectionFactory sqlConnecti
 }
 ```
 
+### Object Mapping with Mapster
+
+For cleaner mapping logic between Domain Entities and API Contracts/DTOs, the solution utilizes **Mapster**. This decouples presentation details from domain entities and reduces manual mapping boilerplate:
+
+```csharp
+// Define mapping rules (IRegister)
+public class ProductMappingConfig : IRegister
+{
+    public void Register(TypeAdapterConfig config)
+    {
+        config.NewConfig<Product, ProductResponse>()
+            .Map(dest => dest.Id, src => src.Id.Value)
+            .Map(dest => dest.Price, src => src.Price.Amount)
+            .Map(dest => dest.Currency, src => src.Price.Currency);
+    }
+}
+
+// Inject IMapper and map
+public class GetProductByIdQueryHandler(IProductRepository repo, IMapper mapper)
+{
+    public async Task<Result<ProductResponse>> Handle(...)
+    {
+        var product = await repo.GetByIdAsync(...);
+        return mapper.Map<ProductResponse>(product);
+    }
+}
+```
+
 ### Outbox Pattern
 
 `DbContextBase.SaveChangesAsync` automatically captures domain events from any `IHasDomainEvents` entity and writes them to an `outbox_messages` table atomically in the same transaction.
@@ -333,6 +362,7 @@ Set `Observability__OtlpEndpoint=http://jaeger:4317` in your environment.
 | `FluentValidation` | 12.x | Command/Query validation |
 | `Microsoft.EntityFrameworkCore` | 10.x | ORM |
 | `Dapper` | 2.x | High-performance Micro-ORM for read queries |
+| `Mapster` | 10.x | High-performance object mapping |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.x | PostgreSQL provider |
 | `Microsoft.EntityFrameworkCore.SqlServer` | 10.x | SQL Server provider |
 | `MassTransit` | 9.x | Message bus abstraction |
