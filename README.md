@@ -20,6 +20,7 @@
 | **CQRS + Mediator** | MediatR 14 with pipeline behaviors |
 | **API style** | ASP.NET Core Minimal API |
 | **Database (multi)** | EF Core 10 — PostgreSQL or SQL Server (config-driven) |
+| **Complex Queries** | Dapper — high performance read-only queries (config-driven) |
 | **Messaging (multi)** | MassTransit 9 — RabbitMQ or Kafka (config-driven) |
 | **Outbox pattern** | Domain events → outbox table via EF Core interceptor |
 | **Validation** | FluentValidation in MediatR pipeline |
@@ -159,6 +160,7 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 | `GET` | `/api/v1/products/{id}` | Get product by ID |
 | `PUT` | `/api/v1/products/{id}` | Update product |
 | `DELETE` | `/api/v1/products/{id}` | Soft-delete (deactivate) |
+| `GET` | `/api/v1/products/stock-report` | Stock statistics/low-stock report (Dapper example) |
 | `GET` | `/health` | Health check |
 | `GET` | `/openapi/v1.json` | OpenAPI spec (Development only) |
 
@@ -199,6 +201,22 @@ public class CreateProductCommandHandler : ICommandHandler<CreateProductCommand,
             return Error.Conflict("Product.NameConflict", "Name already exists.");
         // ...
         return product.Id.Value;
+    }
+}
+```
+
+### CQRS Read Optimization with Dapper
+
+For read-only operations requiring high performance or complex logic (e.g. dashboards, statistics, or reports), the application injects `ISqlConnectionFactory` and uses **Dapper**. This bypasses EF Core's change tracker and model mapping overhead:
+
+```csharp
+public class GetProductStockReportQueryHandler(ISqlConnectionFactory sqlConnectionFactory)
+    : IQueryHandler<GetProductStockReportQuery, ProductStockReportResponse>
+{
+    public async Task<Result<ProductStockReportResponse>> Handle(...)
+    {
+        using var connection = sqlConnectionFactory.CreateConnection();
+        // Execute optimized raw SQL queries...
     }
 }
 ```
@@ -314,6 +332,7 @@ Set `Observability__OtlpEndpoint=http://jaeger:4317` in your environment.
 | `MediatR` | 14.x | CQRS mediator |
 | `FluentValidation` | 12.x | Command/Query validation |
 | `Microsoft.EntityFrameworkCore` | 10.x | ORM |
+| `Dapper` | 2.x | High-performance Micro-ORM for read queries |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.x | PostgreSQL provider |
 | `Microsoft.EntityFrameworkCore.SqlServer` | 10.x | SQL Server provider |
 | `MassTransit` | 9.x | Message bus abstraction |

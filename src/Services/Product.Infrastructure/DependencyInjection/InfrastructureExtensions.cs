@@ -78,6 +78,9 @@ public static class InfrastructureExtensions
         services.AddScoped<IUnitOfWork>(sp =>
             sp.GetRequiredService<ProductDbContext>());
 
+        // Register SQL Connection Factory for Dapper queries
+        services.AddScoped<ISqlConnectionFactory, SqlConnectionFactory>();
+
         return services;
     }
 
