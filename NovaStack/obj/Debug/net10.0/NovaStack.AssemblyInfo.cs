@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("NovaStack")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+05c0fb963d0d3cb9f21de0b7fc5589192f5b9211")]
 [assembly: System.Reflection.AssemblyProductAttribute("NovaStack")]
 [assembly: System.Reflection.AssemblyTitleAttribute("NovaStack")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
