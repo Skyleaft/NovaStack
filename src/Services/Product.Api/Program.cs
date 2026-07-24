@@ -33,6 +33,7 @@ try
 
     // ── Application Layer (MediatR, FluentValidation, Pipeline behaviors) ────
     builder.Services.AddProductApplication();
+    builder.Services.AddNovaStackMappings(typeof(Product.Application.DependencyInjection.ApplicationExtensions).Assembly);
 
     // ── Infrastructure Layer (EF Core, Repos, MassTransit) ──────────────────
     builder.Services.AddProductInfrastructure(builder.Configuration);

@@ -1,3 +1,4 @@
+using MapsterMapper;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
 using Product.Application.Common.Abstractions;
@@ -7,7 +8,7 @@ using Product.Domain.Repositories;
 namespace Product.Application.Features.Products.GetProducts;
 
 /// <summary>Handles the <see cref="GetProductsQuery"/>.</summary>
-internal sealed class GetProductsQueryHandler(IProductRepository productRepository)
+internal sealed class GetProductsQueryHandler(IProductRepository productRepository, IMapper mapper)
     : IQueryHandler<GetProductsQuery, PagedResponse<ProductResponse>>
 {
     public async Task<Result<PagedResponse<ProductResponse>>> Handle(
@@ -20,17 +21,10 @@ internal sealed class GetProductsQueryHandler(IProductRepository productReposito
             query.Search,
             ct);
 
+        var mappedItems = mapper.Map<IEnumerable<ProductResponse>>(pagedProducts.Items);
+
         var response = PagedResponse<ProductResponse>.Create(
-            pagedProducts.Items.Select(p => new ProductResponse(
-                p.Id.Value,
-                p.Name,
-                p.Description,
-                p.Price.Amount,
-                p.Price.Currency,
-                p.StockQuantity,
-                p.IsActive,
-                p.CreatedAt,
-                p.UpdatedAt)),
+            mappedItems,
             pagedProducts.Page,
             pagedProducts.PageSize,
             pagedProducts.TotalCount);
