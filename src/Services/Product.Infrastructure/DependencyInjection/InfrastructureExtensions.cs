@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using MongoDB.Driver;
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Messaging;
 using NovaStack.Infrastructure.Messaging.Options;
@@ -43,6 +44,22 @@ public static class InfrastructureExtensions
         services.Configure<DatabaseOptions>(
             configuration.GetSection(DatabaseOptions.SectionName));
 
+        if (dbOptions.Provider == DatabaseProvider.MongoDB)
+        {
+            // Register native MongoDB client (singleton — connection-pooled by the driver)
+            services.AddSingleton<IMongoClient>(_ =>
+                new MongoClient(dbOptions.ConnectionString));
+
+            // Register the MongoDB context for the Product service (scoped)
+            services.AddScoped<ProductMongoDbContext>(sp =>
+                new ProductMongoDbContext(
+                    sp.GetRequiredService<IMongoClient>(),
+                    dbOptions.DatabaseName));
+
+            return services;
+        }
+
+        // ── EF Core (PostgreSQL / SQL Server) ──────────────────────────────
         services.AddDbContext<ProductDbContext>(options =>
         {
             switch (dbOptions.Provider)
@@ -89,7 +106,18 @@ public static class InfrastructureExtensions
     private static IServiceCollection AddProductRepositories(
         this IServiceCollection services)
     {
-        services.AddScoped<IProductRepository, ProductRepository>();
+        // Resolve the correct repository implementation based on the registered provider.
+        // If ProductMongoDbContext is registered (MongoDB path), use MongoProductRepository;
+        // otherwise fall back to the EF Core ProductRepository.
+        services.AddScoped<IProductRepository>(sp =>
+        {
+            var mongoCtx = sp.GetService<ProductMongoDbContext>();
+            if (mongoCtx is not null)
+                return new MongoProductRepository(mongoCtx);
+
+            return new ProductRepository(sp.GetRequiredService<ProductDbContext>());
+        });
+
         return services;
     }
 
@@ -123,14 +151,15 @@ public static class InfrastructureExtensions
         return services;
     }
 
-    /// <summary>Runs EF Core migrations at startup if AutoMigrate is enabled.</summary>
+    /// <summary>Runs EF Core migrations at startup if AutoMigrate is enabled. No-op for MongoDB.</summary>
     public static async Task MigrateProductDatabaseAsync(this IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
         var dbOptions = scope.ServiceProvider
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<DatabaseOptions>>().Value;
 
-        if (!dbOptions.AutoMigrate) return;
+        // MongoDB has no EF migrations — schema is schemaless by design.
+        if (!dbOptions.AutoMigrate || dbOptions.Provider == DatabaseProvider.MongoDB) return;
 
         var context = scope.ServiceProvider.GetRequiredService<ProductDbContext>();
         await context.Database.MigrateAsync();

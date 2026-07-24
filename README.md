@@ -2,7 +2,7 @@
 # 🚀 NovaStack
 
 **Enterprise-grade .NET 10 microservice boilerplate**  
-*Vertical Slice Architecture · CQRS · Minimal API · Multi-DB · Multi-Broker · Docker-ready*
+*Vertical Slice Architecture · CQRS · Minimal API · Multi-DB (PostgreSQL · SQL Server · MongoDB) · Multi-Broker · Docker-ready*
 
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
 [![C#](https://img.shields.io/badge/C%23-13.0-239120?style=flat-square&logo=csharp)](https://learn.microsoft.com/en-us/dotnet/csharp/)
@@ -20,9 +20,10 @@
 | **CQRS + Mediator** | MediatR 14 with pipeline behaviors |
 | **API style** | ASP.NET Core Minimal API |
 | **Database (multi)** | EF Core 10 — PostgreSQL or SQL Server (config-driven) |
-| **Complex Queries** | Dapper — high performance read-only queries (config-driven) |
+| **NoSQL (multi)** | MongoDB 8 via native `MongoDB.Driver` 3.x (config-driven) |
+| **Complex Queries** | Dapper — high performance read-only queries (relational only) |
 | **Messaging (multi)** | Native Clients (RabbitMQ.Client, Confluent.Kafka) (config-driven) |
-| **Outbox pattern** | Domain events → outbox table via EF Core interceptor |
+| **Outbox pattern** | Domain events → outbox table via EF Core interceptor (relational only) |
 | **Validation** | FluentValidation in MediatR pipeline |
 | **Object Mapping** | Mapster — high-performance object mapping |
 | **Error handling** | Railway-oriented `Result<T>` — no exceptions for domain flow |
@@ -142,6 +143,19 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 }
 ```
 
+### MongoDB
+
+```json
+"Database": {
+  "Provider": "MongoDB",
+  "ConnectionString": "mongodb://myuser:mypassword@localhost:27017",
+  "DatabaseName": "novastack_products"
+}
+```
+
+> **No migrations needed** — MongoDB is schemaless. Collections are created on first write.  
+> Start the container: `docker-compose up mongo -d`
+
 ### JWT
 
 ```json
@@ -226,6 +240,8 @@ public class GetProductStockReportQueryHandler(ISqlConnectionFactory sqlConnecti
 }
 ```
 
+> **Note**: `ISqlConnectionFactory` is only registered for relational providers (PostgreSQL / SQL Server). It is not available when `Provider` is `MongoDB`.
+
 ### Object Mapping with Mapster
 
 For cleaner mapping logic between Domain Entities and API Contracts/DTOs, the solution utilizes **Mapster**. This decouples presentation details from domain entities and reduces manual mapping boilerplate:
@@ -254,7 +270,67 @@ public class GetProductByIdQueryHandler(IProductRepository repo, IMapper mapper)
 }
 ```
 
-### Outbox Pattern
+### Edit (UpdateProduct) Vertical Slice Example
+
+Demonstrates a `PUT` command that returns `204 No Content` on success, matching the pattern in `Product.Application/Features/Products/UpdateProduct/UpdateProduct.cs`:
+
+```csharp
+// ICommand (no return type) → handler returns Result (not Result<T>)
+public sealed record UpdateProductCommand(Guid Id, string Name, string Description,
+    decimal Price, string Currency) : ICommand;
+
+// Validator — runs in MediatR pipeline before handler
+public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
+{
+    public UpdateProductCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Currency).NotEmpty().Length(3).Matches("^[A-Z]{3}$");
+    }
+}
+
+// Handler — returns 404 via Error.NotFound, never throws
+internal sealed class UpdateProductCommandHandler(
+    IProductRepository productRepository, IUnitOfWork unitOfWork)
+    : ICommandHandler<UpdateProductCommand>
+{
+    public async Task<Result> Handle(UpdateProductCommand command, CancellationToken ct)
+    {
+        var product = await productRepository.GetByIdAsync(ProductId.From(command.Id), ct);
+        if (product is null)
+            return Error.NotFound("Product.NotFound", $"Product '{command.Id}' not found.");
+
+        product.Update(command.Name, command.Description,
+            Money.Create(command.Price, command.Currency));
+        await unitOfWork.SaveChangesAsync(ct);
+        return Result.Success();
+    }
+}
+
+// Endpoint — auto-registered via IEndpointDefinition scanner
+public sealed class UpdateProductEndpoint : IEndpointDefinition
+{
+    public void DefineEndpoints(IEndpointRouteBuilder app)
+    {
+        app.MapPut("/api/v1/products/{id:guid}", HandleAsync)
+            .WithName("UpdateProduct").WithTags("Products")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+    }
+
+    private static async Task<IResult> HandleAsync(
+        Guid id, UpdateProductRequest req, ISender sender, CancellationToken ct)
+    {
+        var result = await sender.Send(
+            new UpdateProductCommand(id, req.Name, req.Description, req.Price, req.Currency), ct);
+        return result.IsSuccess ? Results.NoContent() : result.Error.ToHttpResult();
+    }
+}
+```
+
 
 `DbContextBase.SaveChangesAsync` automatically captures domain events from any `IHasDomainEvents` entity and writes them to an `outbox_messages` table atomically in the same transaction.
 
@@ -306,8 +382,9 @@ The `docker-compose.yml` brings up the full stack:
 
 | Service | Port | Description |
 |---------|------|-------------|
-| PostgreSQL | `5432` | Primary database |
-| SQL Server | `1433` | Alternative database |
+| PostgreSQL | `5432` | Primary relational database |
+| SQL Server | `1433` | Alternative relational database |
+| MongoDB | `27017` | Document database (use when `Provider: MongoDB`) |
 | RabbitMQ | `5672` / `15672` | Message broker + management UI |
 | Kafka | `9092` / `29092` | Event streaming |
 | Redis | `6379` | Distributed cache |
@@ -360,11 +437,12 @@ Set `Observability__OtlpEndpoint=http://jaeger:4317` in your environment.
 |---------|---------|---------|
 | `MediatR` | 14.x | CQRS mediator |
 | `FluentValidation` | 12.x | Command/Query validation |
-| `Microsoft.EntityFrameworkCore` | 10.x | ORM |
+| `Microsoft.EntityFrameworkCore` | 10.x | ORM (relational providers) |
 | `Dapper` | 2.x | High-performance Micro-ORM for read queries |
 | `Mapster` | 10.x | High-performance object mapping |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.x | PostgreSQL provider |
 | `Microsoft.EntityFrameworkCore.SqlServer` | 10.x | SQL Server provider |
+| `MongoDB.Driver` | 3.x | Native MongoDB client |
 | `RabbitMQ.Client` | 7.x | Native RabbitMQ client |
 | `Confluent.Kafka` | 2.x | Native Kafka client |
 | `Serilog.AspNetCore` | 10.x | Structured logging |

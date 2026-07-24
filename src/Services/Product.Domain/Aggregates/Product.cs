@@ -53,6 +53,32 @@ public sealed class Product : Entity<ProductId>
         return product;
     }
 
+    /// <summary>
+    /// Reconstitutes a <see cref="Product"/> from persisted state without raising domain events.
+    /// Use this in repository implementations that read from a document store (e.g. MongoDB)
+    /// where EF Core's parameterless-constructor hydration path is not available.
+    /// </summary>
+    public static Product Reconstitute(
+        ProductId id,
+        string name,
+        string description,
+        Money price,
+        int stockQuantity,
+        bool isActive,
+        DateTime createdAt,
+        DateTime? updatedAt) => new()
+    {
+        Id = id,
+        Name = name,
+        Description = description,
+        Price = price,
+        StockQuantity = stockQuantity,
+        IsActive = isActive,
+        CreatedAt = createdAt,
+        UpdatedAt = updatedAt
+    };
+
+
     // ── Behaviour ─────────────────────────────────────────────────────────
     public void Update(string name, string description, Money price)
     {

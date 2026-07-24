@@ -4,7 +4,8 @@ namespace NovaStack.Infrastructure.Persistence.Options;
 public enum DatabaseProvider
 {
     PostgreSQL,
-    SqlServer
+    SqlServer,
+    MongoDB
 }
 
 /// <summary>Database connection settings loaded from configuration.</summary>
@@ -14,6 +15,9 @@ public sealed class DatabaseOptions
 
     public DatabaseProvider Provider { get; set; } = DatabaseProvider.PostgreSQL;
     public string ConnectionString { get; set; } = string.Empty;
+
+    /// <summary>MongoDB database name. Only used when <see cref="Provider"/> is <see cref="DatabaseProvider.MongoDB"/>.</summary>
+    public string DatabaseName { get; set; } = "novastack";
 
     /// <summary>Enable EF Core detailed errors (development only).</summary>
     public bool EnableDetailedErrors { get; set; }

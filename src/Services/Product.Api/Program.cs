@@ -1,6 +1,7 @@
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
+using NovaStack.Infrastructure.Persistence.Options;
 using Product.Application.DependencyInjection;
 using Product.Infrastructure.DependencyInjection;
 using Scalar.AspNetCore;
@@ -82,7 +83,15 @@ try
     app.MapHealthChecks("/health");
 
     // ── Auto-migrate ─────────────────────────────────────────────────────────
-    await app.Services.MigrateProductDatabaseAsync();
+    // MongoDB is schemaless — no EF migrations to run.
+    var dbProvider = app.Configuration
+        .GetSection(DatabaseOptions.SectionName)
+        .GetValue<DatabaseProvider>(nameof(DatabaseOptions.Provider));
+
+    if (dbProvider == DatabaseProvider.MongoDB)
+        Log.Information("Database provider is MongoDB — skipping EF Core migration.");
+    else
+        await app.Services.MigrateProductDatabaseAsync();
 
     app.Lifetime.ApplicationStarted.Register(() =>
     {

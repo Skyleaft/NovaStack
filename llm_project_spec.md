@@ -10,13 +10,13 @@ This document provides a token-efficient, high-density architectural and coding 
 - **Architectural Style**: Vertical Slice Architecture (VSA)
 - **CQRS & Mediator**: MediatR 14 (with logging and validation pipeline behaviors)
 - **APIs**: ASP.NET Core Minimal APIs with custom route scanner (`IEndpointDefinition`)
-- **Database (Multi-DB)**: EF Core 10 (PostgreSQL via Npgsql, SQL Server via MS SqlClient)
-- **Query Optimization**: Dapper (for high-performance read-only queries)
+- **Database (Multi-DB)**: EF Core 10 (PostgreSQL via Npgsql, SQL Server via MS SqlClient), MongoDB 8 via native `MongoDB.Driver` 3.x
+- **Query Optimization**: Dapper (for high-performance read-only queries on relational providers)
 - **Object Mapping**: Mapster
 - **Validation**: FluentValidation 12
 - **Error Handling**: Railway-oriented `Result<T>` and `Error` types (avoid domain exceptions)
 - **Messaging (Multi-Broker)**: Native Clients for RabbitMQ and Confluent Kafka
-- **Reliability**: Outbox Pattern (Domain Events captured automatically in `SaveChangesAsync`)
+- **Reliability**: Outbox Pattern (Domain Events captured automatically in `SaveChangesAsync`) — relational providers only
 - **Testing**: xUnit, Moq, FluentAssertions, Testcontainers, NetArchTest (Architecture validation)
 
 ---
@@ -269,6 +269,213 @@ if (messagingOptions.Provider == MessagingProvider.RabbitMQ)
 ```
 
 ---
+
+### 7. MongoDB Native Driver
+
+When `Database:Provider` is `MongoDB`, EF Core is **not** used. The stack switches to the native `MongoDB.Driver`.
+
+**Key differences from relational providers:**
+- No EF migrations — MongoDB is schemaless. Collections are created on first write.
+- No outbox pattern — domain events are published directly after each write (fire-and-forget). Add a Mongo outbox collection explicitly if at-least-once delivery is required.
+- No `IUnitOfWork` / `ISqlConnectionFactory` registered.
+- Use `Reconstitute(...)` factory on domain aggregates to hydrate from documents (no EF private-setter magic).
+
+#### Configuration (`appsettings.json`)
+```json
+"Database": {
+  "Provider": "MongoDB",
+  "ConnectionString": "mongodb://myuser:mypassword@localhost:27017",
+  "DatabaseName": "novastack_products"
+}
+```
+
+Start MongoDB: `docker-compose up mongo -d`
+
+#### Shared base types (`NovaStack.Infrastructure`)
+
+```csharp
+// NovaStack.Infrastructure/Persistence/MongoDb/IMongoDbContext.cs
+public interface IMongoDbContext
+{
+    IMongoCollection<T> GetCollection<T>(string name);
+}
+
+// NovaStack.Infrastructure/Persistence/MongoDb/MongoDbContextBase.cs
+public abstract class MongoDbContextBase : IMongoDbContext
+{
+    private readonly IMongoDatabase _database;
+    protected MongoDbContextBase(IMongoClient client, string databaseName)
+        => _database = client.GetDatabase(databaseName);
+
+    public IMongoCollection<T> GetCollection<T>(string name)
+        => _database.GetCollection<T>(name);
+}
+```
+
+#### Service-specific context & document POCO
+
+```csharp
+// Product.Infrastructure/Persistence/Documents/ProductDocument.cs
+public sealed class ProductDocument
+{
+    [BsonId, BsonRepresentation(BsonType.String)]
+    public Guid Id { get; set; }
+    [BsonElement("name")]   public string Name { get; set; } = string.Empty;
+    [BsonElement("price_amount")] public decimal PriceAmount { get; set; }
+    [BsonElement("price_currency")] public string PriceCurrency { get; set; } = string.Empty;
+    // ... other fields
+}
+
+// Product.Infrastructure/Persistence/ProductMongoDbContext.cs
+public sealed class ProductMongoDbContext(IMongoClient client, string dbName)
+    : MongoDbContextBase(client, dbName)
+{
+    public IMongoCollection<ProductDocument> Products =>
+        GetCollection<ProductDocument>("products");
+}
+```
+
+#### Repository skeleton
+
+```csharp
+// Product.Infrastructure/Repositories/MongoProductRepository.cs
+internal sealed class MongoProductRepository(ProductMongoDbContext context) : IProductRepository
+{
+    private readonly IMongoCollection<ProductDocument> _collection = context.Products;
+
+    public async Task<DomainProduct?> GetByIdAsync(ProductId id, CancellationToken ct = default)
+    {
+        var doc = await _collection
+            .Find(Builders<ProductDocument>.Filter.Eq(d => d.Id, id.Value))
+            .FirstOrDefaultAsync(ct);
+        return doc is null ? null : MapToDomain(doc);
+    }
+
+    public async Task AddAsync(DomainProduct entity, CancellationToken ct = default) =>
+        await _collection.InsertOneAsync(MapToDocument(entity), cancellationToken: ct);
+
+    public async Task UpdateAsync(DomainProduct entity, CancellationToken ct = default) =>
+        await _collection.ReplaceOneAsync(
+            Builders<ProductDocument>.Filter.Eq(d => d.Id, entity.Id.Value),
+            MapToDocument(entity), cancellationToken: ct);
+
+    // MapToDomain uses DomainProduct.Reconstitute(...) — does NOT raise domain events
+    private static DomainProduct MapToDomain(ProductDocument doc) =>
+        DomainProduct.Reconstitute(ProductId.From(doc.Id), doc.Name, ...);
+}
+```
+
+#### DI registration (`InfrastructureExtensions.cs`)
+
+```csharp
+// MongoDB branch (no EF Core, no UoW, no SQL factory)
+if (dbOptions.Provider == DatabaseProvider.MongoDB)
+{
+    services.AddSingleton<IMongoClient>(_ => new MongoClient(dbOptions.ConnectionString));
+    services.AddScoped<ProductMongoDbContext>(sp =>
+        new ProductMongoDbContext(sp.GetRequiredService<IMongoClient>(), dbOptions.DatabaseName));
+    return services;
+}
+// IProductRepository resolves MongoProductRepository when ProductMongoDbContext is registered
+services.AddScoped<IProductRepository>(sp =>
+    sp.GetService<ProductMongoDbContext>() is { } ctx
+        ? new MongoProductRepository(ctx)
+        : new ProductRepository(sp.GetRequiredService<ProductDbContext>()));
+```
+
+---
+
+### 8. UpdateProduct — Edit Vertical Slice Example
+
+This is a complete, **real** example from the codebase at
+`Product.Application/Features/Products/UpdateProduct/UpdateProduct.cs`.
+
+```csharp
+// ── Command ──────────────────────────────────────────────────────────────────
+public sealed record UpdateProductCommand(
+    Guid Id,
+    string Name,
+    string Description,
+    decimal Price,
+    string Currency
+) : ICommand;   // ICommand (no return value) — returns Result
+
+// ── Validator ─────────────────────────────────────────────────────────────────
+public sealed class UpdateProductCommandValidator : AbstractValidator<UpdateProductCommand>
+{
+    public UpdateProductCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Description).NotEmpty().MaximumLength(2000);
+        RuleFor(x => x.Price).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Currency).NotEmpty().Length(3).Matches("^[A-Z]{3}$");
+    }
+}
+
+// ── Handler ───────────────────────────────────────────────────────────────────
+internal sealed class UpdateProductCommandHandler(
+    IProductRepository productRepository,
+    IUnitOfWork unitOfWork)              // IUnitOfWork is null for MongoDB — inject conditionally
+    : ICommandHandler<UpdateProductCommand>
+{
+    public async Task<Result> Handle(UpdateProductCommand command, CancellationToken ct)
+    {
+        var product = await productRepository.GetByIdAsync(ProductId.From(command.Id), ct);
+        if (product is null)
+            return Error.NotFound("Product.NotFound", $"Product with id '{command.Id}' was not found.");
+
+        product.Update(command.Name, command.Description, Money.Create(command.Price, command.Currency));
+        await unitOfWork.SaveChangesAsync(ct);  // EF Core saves + outbox flush
+        // For MongoDB: call productRepository.UpdateAsync(product, ct) directly
+
+        return Result.Success();
+    }
+}
+
+// ── Endpoint ──────────────────────────────────────────────────────────────────
+public sealed class UpdateProductEndpoint : IEndpointDefinition
+{
+    public void DefineEndpoints(IEndpointRouteBuilder app)
+    {
+        app.MapPut("/api/v1/products/{id:guid}", HandleAsync)
+            .WithName("UpdateProduct")
+            .WithSummary("Update an existing product")
+            .WithTags("Products")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
+    }
+
+    private static async Task<IResult> HandleAsync(
+        Guid id,
+        UpdateProductRequest request,
+        ISender sender,
+        CancellationToken ct)
+    {
+        var command = new UpdateProductCommand(
+            id, request.Name, request.Description, request.Price, request.Currency);
+        var result = await sender.Send(command, ct);
+
+        return result.IsSuccess
+            ? Results.NoContent()           // 204 — no body on successful update
+            : result.Error.ToHttpResult();
+    }
+}
+
+// ── Request DTO ───────────────────────────────────────────────────────────────
+public sealed record UpdateProductRequest(
+    string Name,
+    string Description,
+    decimal Price,
+    string Currency);
+```
+
+**Key patterns demonstrated:**
+- `ICommand` (no generic type arg) → handler returns `Result` (not `Result<T>`)
+- `404 Not Found` returned as `Error.NotFound(...)` — no exception thrown
+- HTTP `204 No Content` on success (edit operations return no body)
+- All four VSA files in one file here for brevity; split into separate `.cs` files in the real codebase
 
 ## 🚫 LLM Guardrails & Code Standards
 
