@@ -37,5 +37,9 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
 
         builder.Ignore(r => r.DomainEvents);
         builder.Ignore(r => r.Permissions); // Stored as separate table via owned entity if needed
+
+        builder.Navigation(r => r.Users)
+            .HasField("_users")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

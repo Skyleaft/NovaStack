@@ -38,8 +38,7 @@ internal sealed class RoleRepository(IdentityDbContext context) : IRoleRepositor
         var role = await context.Roles.FindAsync([roleId], ct)
             ?? throw new InvalidOperationException($"Role {roleId.Value} not found.");
 
-        // EF Core many-to-many: just add to the collection — it handles the join row
-        ((List<Role>)user.Roles).Add(role);
+        user.AssignRole(role);
     }
 
     public async Task RevokeFromUserAsync(UserId userId, RoleId roleId, CancellationToken ct = default)
@@ -48,8 +47,6 @@ internal sealed class RoleRepository(IdentityDbContext context) : IRoleRepositor
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new InvalidOperationException($"User {userId.Value} not found.");
 
-        var role = user.Roles.FirstOrDefault(r => r.Id == roleId);
-        if (role is not null)
-            ((List<Role>)user.Roles).Remove(role);
+        user.RemoveRole(roleId);
     }
 }

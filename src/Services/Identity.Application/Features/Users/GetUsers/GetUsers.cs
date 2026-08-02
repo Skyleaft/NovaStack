@@ -14,13 +14,16 @@ namespace Identity.Application.Features.Users.GetUsers;
 // ── Query / Response ─────────────────────────────────────────────────────────
 public sealed record GetUsersQuery(int Page, int PageSize, string? Search) : IQuery<PagedResponse<UserSummaryResponse>>;
 
-public sealed record UserSummaryResponse(
-    Guid Id,
-    string Email,
-    string FullName,
-    bool IsActive,
-    bool IsEmailVerified,
-    DateTime CreatedAt);
+public sealed class UserSummaryResponse
+{
+    public Guid Id { get; set; }
+    public string Email { get; set; } = null!;
+    public string FullName { get; set; } = null!;
+    public bool IsActive { get; set; }
+    public bool IsEmailVerified { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 internal sealed class GetUsersQueryHandler(ISqlConnectionFactory sqlConnectionFactory)

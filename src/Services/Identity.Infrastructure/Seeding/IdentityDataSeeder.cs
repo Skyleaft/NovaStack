@@ -65,7 +65,7 @@ public static class IdentityDataSeeder
             .Include(u => u.Roles)
             .FirstAsync(u => u.Id == userId);
 
-        ((List<Role>)userWithRoles.Roles).Add(adminRole);
+        userWithRoles.AssignRole(adminRole);
         await db.SaveChangesAsync();
 
         logger.LogInformation(

@@ -19,6 +19,9 @@ public sealed class Role : Entity<RoleId>
     private readonly List<Permission> _permissions = [];
     public IReadOnlyCollection<Permission> Permissions => _permissions.AsReadOnly();
 
+    private readonly List<User> _users = [];
+    public IReadOnlyCollection<User> Users => _users.AsReadOnly();
+
     // ── EF Core constructor ─────────────────────────────────────────────────
     private Role() : base() { }
 

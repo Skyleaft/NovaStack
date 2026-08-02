@@ -53,13 +53,17 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.HasIndex(u => u.Email).IsUnique().HasDatabaseName("ix_users_email");
 
-        // Many-to-many: User <-> Role via join table user_roles
+        // Map via join entity table explicitly to avoid implicit skip navigation issues
         builder.HasMany(u => u.Roles)
-            .WithMany()
-            .UsingEntity(
-                "user_roles",
-                l => l.HasOne(typeof(Role)).WithMany().HasForeignKey("role_id"),
-                r => r.HasOne(typeof(User)).WithMany().HasForeignKey("user_id"));
+            .WithMany(r => r.Users)
+            .UsingEntity<UserRole>(
+                r => r.HasOne<Role>().WithMany().HasForeignKey(ur => ur.RoleId),
+                l => l.HasOne<User>().WithMany().HasForeignKey(ur => ur.UserId)
+            );
+
+        builder.Navigation(u => u.Roles)
+            .HasField("_roles")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         // Ignore domain events collection from persistence
         builder.Ignore(u => u.DomainEvents);

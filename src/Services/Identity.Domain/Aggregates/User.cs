@@ -85,6 +85,28 @@ public sealed class User : Entity<UserId>
     };
 
     // ── Behaviour ───────────────────────────────────────────────────────────
+    public void AssignRole(Role role)
+    {
+        Guard.NotNull(role, nameof(role));
+        if (!_roles.Contains(role))
+        {
+            _roles.Add(role);
+            UpdatedAt = DateTime.UtcNow;
+        }
+    }
+
+    public void RemoveRole(RoleId roleId)
+    {
+        Guard.NotNull(roleId, nameof(roleId));
+        var role = _roles.FirstOrDefault(r => r.Id == roleId);
+        if (role is not null)
+        {
+            _roles.Remove(role);
+            UpdatedAt = DateTime.UtcNow;
+        }
+    }
+
+
     public void SetPassword(string newPasswordHash)
     {
         Guard.NotNullOrWhiteSpace(newPasswordHash, nameof(newPasswordHash));
