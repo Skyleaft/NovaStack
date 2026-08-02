@@ -45,7 +45,9 @@ public sealed class DeleteProductEndpoint : IEndpointDefinition
             .WithName("DeleteProduct")
             .WithSummary("Deactivate a product (soft delete)")
             .WithTags("Products")
+            .RequireAuthorization() // Requires a valid JWT token from Identity Service
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status404NotFound);
     }
 

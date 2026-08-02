@@ -50,6 +50,9 @@ public static class InfrastructureServiceExtensions
 
         services.AddAuthorization();
 
+        // Token generation service (used by Identity.Application handlers)
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+
         return services;
     }
 

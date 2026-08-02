@@ -167,6 +167,39 @@ services:
     networks:
       - novastack-network
 
+  identity-api:
+    build:
+      context: .
+      dockerfile: src/Services/Identity.Api/Dockerfile
+    container_name: novastack-identity-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - Database__Provider=PostgreSQL
+      - Database__ConnectionString=Host=postgres;Port=5432;Database=novastack_identity;Username=postgres;Password=postgres
+      - Database__AutoMigrate=true
+      - Jwt__Issuer=NovaStack
+      - Jwt__Audience=NovaStack.Clients
+      - Jwt__SecretKey=CHANGE_ME_super_secret_key_at_least_32_chars!
+      - Jwt__ExpiryMinutes=60
+      - Jwt__RefreshTokenExpiryDays=7
+      - Cache__Provider=Redis
+      - Cache__RedisConnectionString=redis:6379
+    ports:
+      - "5010:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - novastack-network
+
   product-consumer:
     build:
       context: .

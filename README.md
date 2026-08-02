@@ -28,6 +28,9 @@
 | **Object Mapping** | Mapster — high-performance object mapping |
 | **Error handling** | Railway-oriented `Result<T>` — no exceptions for domain flow |
 | **Caching** | In-memory or Redis (config-driven) |
+| **Identity** | Standard OpenID Connect · JWT Bearer · AccessToken + RefreshToken rotation |
+| **User Management** | Register, login, profile, deactivate — full CRUD |
+| **Authorization** | RBAC — role-based policies, `Admin` policy out-of-the-box |
 | **Auth** | JWT Bearer |
 | **Logging** | Serilog (console + rolling file, enriched) |
 | **Observability** | OpenTelemetry traces + metrics + runtime instrumentation |
@@ -50,7 +53,11 @@ NovaStack/
 │       ├── Product.Domain/                # Aggregate, ValueObjects, Domain Events, Repository interface
 │       ├── Product.Application/           # CQRS vertical slices, pipeline behaviors, endpoint definitions
 │       ├── Product.Infrastructure/        # EF Core DbContext, Repository impl, Native Messaging wiring
-│       └── Product.Api/                   # Minimal API host, composition root, Dockerfile
+│       ├── Product.Api/                   # Minimal API host, composition root, Dockerfile
+│       ├── Identity.Domain/               # User/Role/RefreshToken aggregates, RBAC Permission VO
+│       ├── Identity.Application/          # 16 VSA slices: Auth, OIDC, Users, Roles
+│       ├── Identity.Infrastructure/       # EF Core IdentityDbContext (identity schema), repositories
+│       └── Identity.Api/                  # OIDC + Auth host (port 5010), Dockerfile
 │
 ├── src/Workers/
 │   ├── Product.Consumer/                  # MassTransit worker (RabbitMQ or Kafka)
@@ -84,15 +91,19 @@ docker-compose up postgres rabbitmq redis -d
 ### 2. Run the API
 
 ```bash
+# Product API (port 5191 / 5000 in Docker)
 cd src/Services/Product.Api
+dotnet run
+
+# Identity API (port 5010)
+cd src/Services/Identity.Api
 dotnet run
 ```
 
-API is available at:
-- **Local (.NET CLI)**: `http://localhost:5191` (Scalar UI: `http://localhost:5191/scalar/v1`)
-- **Docker Compose**: `http://localhost:5000` (Scalar UI: `http://localhost:5000/scalar/v1`)
+Product API: `http://localhost:5191` (Scalar: `http://localhost:5191/scalar/v1`)
+Identity API: `http://localhost:5010` (Scalar: `http://localhost:5010/scalar/v1`)
 
-OpenAPI spec: `/openapi/v1.json`
+OIDC Discovery: `http://localhost:5010/.well-known/openid-configuration`
 
 ### 3. Run everything via Docker
 
@@ -156,16 +167,28 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 > **No migrations needed** — MongoDB is schemaless. Collections are created on first write.  
 > Start the container: `docker-compose up mongo -d`
 
-### JWT
+### JWT + OpenID Connect (Identity Service)
 
 ```json
 "Jwt": {
   "Issuer": "NovaStack",
   "Audience": "NovaStack.Clients",
-  "SecretKey": "your-secret-key-min-32-chars",
-  "ExpiryMinutes": 60
+  "SecretKey": "CHANGE_ME_super_secret_key_at_least_32_chars!",
+  "ExpiryMinutes": 60,
+  "RefreshTokenExpiryDays": 7,
+  "ValidateIssuer": true,
+  "ValidateAudience": true,
+  "ValidateLifetime": true,
+  "OpenId": {
+    "Authority": "http://localhost:5010",
+    "SupportedScopes": "openid profile email",
+    "SupportedResponseTypes": "code token id_token",
+    "SupportedGrantTypes": "authorization_code password refresh_token"
+  }
 }
 ```
+
+> The `OpenId.Authority` is used to build the discovery document URLs. Leave empty to auto-detect from the current request host.
 
 ---
 
@@ -182,6 +205,46 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 | `GET` | `/health` | Health check |
 | `GET` | `/openapi/v1.json` | OpenAPI spec (Development only) |
 | `GET` | `/scalar/v1` | Scalar API Interactive UI (Development only) |
+
+---
+
+## 🔐 Identity Service API (`http://localhost:5010`)
+
+### Authentication
+
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| `POST` | `/api/v1/auth/register` | — | Register a new user account |
+| `POST` | `/api/v1/auth/login` | — | Login — returns `AccessToken` + `RefreshToken` |
+| `POST` | `/api/v1/auth/refresh` | — | Rotate tokens using a valid refresh token |
+| `POST` | `/api/v1/auth/revoke` | 🔒 | Revoke a specific refresh token |
+| `POST` | `/api/v1/auth/logout` | 🔒 | Revoke ALL refresh tokens (logout all devices) |
+| `GET`  | `/api/v1/auth/me` | 🔒 | Get current user profile + roles |
+
+### OpenID Connect (Standard)
+
+| Method | Route | Auth | Description |
+|--------|-------|------|-------------|
+| `GET` | `/.well-known/openid-configuration` | — | OIDC Discovery document |
+| `GET` | `/connect/userinfo` | 🔒 | Standard UserInfo claims (OIDC Core spec) |
+
+### User Management (Admin)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/v1/users` | Paginated user list with search |
+| `GET` | `/api/v1/users/{id}` | User detail with roles |
+| `PUT` | `/api/v1/users/{id}` | Update user profile |
+| `DELETE` | `/api/v1/users/{id}` | Soft-deactivate user + revoke tokens |
+
+### Role Management (Admin)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `POST` | `/api/v1/roles` | Create a new RBAC role |
+| `GET` | `/api/v1/roles` | List all roles |
+| `POST` | `/api/v1/users/{id}/roles` | Assign role to user |
+| `DELETE` | `/api/v1/users/{id}/roles/{roleId}` | Revoke role from user |
 
 ---
 
@@ -388,7 +451,8 @@ The `docker-compose.yml` brings up the full stack:
 | RabbitMQ | `5672` / `15672` | Message broker + management UI |
 | Kafka | `9092` / `29092` | Event streaming |
 | Redis | `6379` | Distributed cache |
-| Product API | `5000` | REST API |
+| Product API | `5000` | Product REST API |
+| **Identity API** | **`5010`** | **Auth / OIDC / User Management API** |
 | Product Consumer | — | Background message consumer |
 | Notification Consumer | — | Notification dispatch worker |
 

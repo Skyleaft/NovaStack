@@ -512,3 +512,126 @@ dotnet test tests/UnitTests
 dotnet test tests/ArchitectureTests
 dotnet test tests/IntegrationTests
 ```
+
+---
+
+## 🔐 Identity Service
+
+The Identity Service is a **self-contained microservice** (`Identity.*` projects) that implements Standard OpenID Connect, RBAC authorization, and access/refresh token management. It follows the exact same VSA, CQRS, and Result pattern as the Product service.
+
+### Projects
+
+| Project | Role |
+|---|---|
+| `Identity.Domain` | Aggregates (`User`, `Role`, `RefreshToken`), ValueObjects (`UserId`, `RoleId`, `Permission`), Repository interfaces |
+| `Identity.Application` | 16 VSA slices across Auth, OIDC, Users, Roles |
+| `Identity.Infrastructure` | EF Core `IdentityDbContext` (`identity` schema), 3 Repositories, Dapper factory |
+| `Identity.Api` | Composition root, Program.cs, OIDC config, Dockerfile, port `5010` |
+
+### OIDC Endpoints
+
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| `GET` | `/.well-known/openid-configuration` | — | OIDC Discovery document |
+| `GET` | `/connect/userinfo` | 🔒 | Standard UserInfo claims (`sub`, `email`, `given_name`, `family_name`, `roles`) |
+
+### Auth Endpoints
+
+| Method | Route | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/register` | — | Register new user account |
+| `POST` | `/api/v1/auth/login` | — | Login → AccessToken + RefreshToken |
+| `POST` | `/api/v1/auth/refresh` | — | Rotate expired access token via refresh token |
+| `POST` | `/api/v1/auth/revoke` | 🔒 | Revoke a specific refresh token |
+| `POST` | `/api/v1/auth/logout` | 🔒 | Revoke ALL refresh tokens (all devices) |
+| `GET`  | `/api/v1/auth/me` | 🔒 | Get current user profile + roles |
+
+### User Management Endpoints (Admin only)
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/v1/users` | Paginated list with search (Dapper) |
+| `GET` | `/api/v1/users/{id}` | Get user detail + roles |
+| `PUT` | `/api/v1/users/{id}` | Update profile (firstName, lastName) |
+| `DELETE` | `/api/v1/users/{id}` | Soft-deactivate + revoke all tokens |
+
+### Role Management Endpoints (Admin only)
+
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/api/v1/roles` | Create a new RBAC role |
+| `GET` | `/api/v1/roles` | List all roles |
+| `POST` | `/api/v1/users/{id}/roles` | Assign role to user |
+| `DELETE` | `/api/v1/users/{id}/roles/{roleId}` | Revoke role from user |
+
+### Token Flow
+
+```text
+POST /api/v1/auth/login
+  → Validate credentials (IPasswordHasher)
+  → Load roles from DB
+  → Issue JWT (HS256, sub/email/roles/jti/iat/exp/iss/aud)
+  → Issue opaque RefreshToken (64-byte random, stored in DB)
+  → Return { accessToken, refreshToken, tokenType, expiresIn, roles }
+
+POST /api/v1/auth/refresh
+  → Validate expired JWT (signature only, skip lifetime)
+  → Look up refresh token in DB — must be active & match user
+  → Revoke old refresh token (rotation)
+  → Issue new access token + new refresh token
+```
+
+### RBAC Model
+
+- Roles are stored in the `identity.roles` table and assigned to users via `identity.user_roles` (many-to-many).
+- JWT carries `roles` claims (`ClaimTypes.Role`) — one per role.
+- Admin-restricted endpoints use `.RequireAuthorization("Admin")` which maps to `RequireRole("Admin")` policy.
+- Permissions (`resource:action` value objects) are stored on `Role` and available for fine-grained checks.
+
+### Configuration
+
+```json
+"Jwt": {
+  "Issuer": "NovaStack",
+  "Audience": "NovaStack.Clients",
+  "SecretKey": "CHANGE_ME_super_secret_key_at_least_32_chars!",
+  "ExpiryMinutes": 60,
+  "RefreshTokenExpiryDays": 7,
+  "OpenId": {
+    "Authority": "https://identity.example.com",
+    "SupportedScopes": "openid profile email",
+    "SupportedResponseTypes": "code token id_token",
+    "SupportedGrantTypes": "authorization_code password refresh_token"
+  }
+}
+```
+
+### Run Identity API
+
+```bash
+# Start DB and cache
+docker-compose up postgres redis -d
+
+# Run Identity API (port 5010)
+cd src/Services/Identity.Api && dotnet run
+
+# OIDC Discovery
+curl http://localhost:5010/.well-known/openid-configuration
+
+# Scalar UI
+open http://localhost:5010/scalar/v1
+```
+
+### EF Core Migrations (Identity)
+
+```bash
+dotnet ef migrations add InitialIdentity \
+  --project src/Services/Identity.Infrastructure \
+  --startup-project src/Services/Identity.Api \
+  --output-dir Persistence/Migrations
+
+dotnet ef database update \
+  --project src/Services/Identity.Infrastructure \
+  --startup-project src/Services/Identity.Api
+```
+
