@@ -17,36 +17,41 @@ namespace NovaStack.Infrastructure.DependencyInjection;
 /// </summary>
 public static class InfrastructureServiceExtensions
 {
-    /// <summary>Registers JWT authentication with configuration from <see cref="JwtOptions"/>.</summary>
+    /// <summary>Registers JWT authentication with configuration from <see cref="AuthenticationOptions"/>.</summary>
     public static IServiceCollection AddNovaStackAuth(
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.AddHttpClient();
 
-        var jwtOptions = configuration
-            .GetSection(JwtOptions.SectionName)
-            .Get<JwtOptions>() ?? new JwtOptions();
+        services.Configure<AuthenticationOptions>(options =>
+        {
+            var section = configuration.GetSection(AuthenticationOptions.SectionName);
+            section.Bind(options);
+
+            var audienceSection = section.GetSection("Audience");
+            if (audienceSection.Exists())
+            {
+                if (audienceSection.GetChildren().Any())
+                {
+                    options.Audiences = audienceSection.Get<List<string>>() ?? new List<string>();
+                }
+                else
+                {
+                    var singleAudience = audienceSection.Get<string>();
+                    if (!string.IsNullOrWhiteSpace(singleAudience))
+                    {
+                        options.Audiences = new List<string> { singleAudience };
+                    }
+                }
+            }
+        });
+
+        services.ConfigureOptions<ConfigureJwtBearerOptions>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = jwtOptions.ValidateIssuer,
-                    ValidateAudience = jwtOptions.ValidateAudience,
-                    ValidateLifetime = jwtOptions.ValidateLifetime,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = jwtOptions.Issuer,
-                    ValidAudience = jwtOptions.Audience,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            string.IsNullOrWhiteSpace(jwtOptions.SecretKey)
-                                ? "default_dev_key_please_change_me_32chars!"
-                                : jwtOptions.SecretKey))
-                };
-            });
+            .AddJwtBearer();
 
         services.AddAuthorization();
 

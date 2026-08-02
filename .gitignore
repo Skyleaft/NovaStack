@@ -112,3 +112,7 @@ yarn-error.log*
 *.swp
 *~.nib
 local.properties
+
+# Identity API keys
+src/Services/Identity.Api/keys/
+

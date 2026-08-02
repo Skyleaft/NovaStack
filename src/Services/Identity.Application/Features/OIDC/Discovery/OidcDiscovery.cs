@@ -23,25 +23,27 @@ public sealed class DiscoveryEndpoint : IEndpointDefinition
             .Produces<OidcDiscoveryDocument>(StatusCodes.Status200OK);
     }
 
-    private static IResult HandleAsync(IOptions<JwtOptions> opts, HttpContext ctx)
+    private static IResult HandleAsync(IOptions<AuthenticationOptions> opts, HttpContext ctx)
     {
-        var authority = string.IsNullOrWhiteSpace(opts.Value.OpenId.Authority)
+        var issuer = string.IsNullOrWhiteSpace(opts.Value.Issuer)
             ? $"{ctx.Request.Scheme}://{ctx.Request.Host}"
-            : opts.Value.OpenId.Authority;
+            : opts.Value.Issuer.TrimEnd('/');
+
+        var isRsa = string.Equals(opts.Value.Signing.Algorithm, "RS256", StringComparison.OrdinalIgnoreCase);
 
         var doc = new OidcDiscoveryDocument(
-            Issuer: opts.Value.Issuer,
-            AuthorizationEndpoint: $"{authority}/connect/authorize",
-            TokenEndpoint: $"{authority}/api/v1/auth/login",
-            UserinfoEndpoint: $"{authority}/connect/userinfo",
-            JwksUri: $"{authority}/.well-known/jwks.json",
-            RevocationEndpoint: $"{authority}/api/v1/auth/revoke",
-            ResponseTypesSupported: opts.Value.OpenId.SupportedResponseTypes.Split(' '),
-            GrantTypesSupported: opts.Value.OpenId.SupportedGrantTypes.Split(' '),
-            ScopesSupported: opts.Value.OpenId.SupportedScopes.Split(' '),
+            Issuer: issuer,
+            AuthorizationEndpoint: $"{issuer}/connect/authorize",
+            TokenEndpoint: $"{issuer}/api/v1/auth/login",
+            UserinfoEndpoint: $"{issuer}/connect/userinfo",
+            JwksUri: $"{issuer}/.well-known/jwks.json",
+            RevocationEndpoint: $"{issuer}/api/v1/auth/revoke",
+            ResponseTypesSupported: ["code", "token", "id_token"],
+            GrantTypesSupported: ["authorization_code", "password", "refresh_token"],
+            ScopesSupported: ["openid", "profile", "email"],
             TokenEndpointAuthMethodsSupported: ["client_secret_post", "client_secret_basic"],
             SubjectTypesSupported: ["public"],
-            IdTokenSigningAlgValuesSupported: ["HS256"],
+            IdTokenSigningAlgValuesSupported: isRsa ? ["RS256"] : ["HS256"],
             ClaimsSupported: ["sub", "email", "given_name", "family_name", "roles", "iat", "exp", "jti"]
         );
 

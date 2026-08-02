@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Claims;
 
 namespace NovaStack.Infrastructure.Authentication;
@@ -26,4 +27,21 @@ public interface IJwtTokenService
     /// Returns <c>null</c> if the token is structurally invalid.
     /// </summary>
     ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
+
+    /// <summary>Gets the public JWK details for JWKS.</summary>
+    JwkDto GetPublicKeyDto();
 }
+
+/// <summary>Represents a JSON Web Key (JWK) details.</summary>
+public sealed record JwkDto(
+    string Kty,
+    string Use,
+    string Alg,
+    string Kid,
+    string N,
+    string E);
+
+/// <summary>Represents a JSON Web Key Set (JWKS) document.</summary>
+public sealed record JwksDocument(
+    IReadOnlyList<JwkDto> Keys);
+

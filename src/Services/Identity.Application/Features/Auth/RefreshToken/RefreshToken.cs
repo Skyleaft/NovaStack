@@ -41,7 +41,7 @@ internal sealed class RefreshTokenCommandHandler(
     IRefreshTokenRepository refreshTokenRepository,
     IUnitOfWork unitOfWork,
     IJwtTokenService jwtTokenService,
-    IOptions<JwtOptions> jwtOptions)
+    IOptions<AuthenticationOptions> jwtOptions)
     : ICommandHandler<RefreshTokenCommand, TokenResponse>
 {
     public async Task<Result<TokenResponse>> Handle(RefreshTokenCommand command, CancellationToken ct)
@@ -80,7 +80,7 @@ internal sealed class RefreshTokenCommandHandler(
             RefreshTokenId.New(),
             newRawRefreshToken,
             user.Id,
-            jwtOptions.Value.RefreshTokenExpiryDays);
+            jwtOptions.Value.RefreshToken.LifetimeDays);
 
         await refreshTokenRepository.AddAsync(newRefreshToken, ct);
         await unitOfWork.SaveChangesAsync(ct);
@@ -89,7 +89,7 @@ internal sealed class RefreshTokenCommandHandler(
             newAccessToken,
             newRawRefreshToken,
             "Bearer",
-            jwtOptions.Value.ExpiryMinutes * 60,
+            jwtOptions.Value.AccessToken.LifetimeMinutes * 60,
             roleNames.AsReadOnly());
     }
 }

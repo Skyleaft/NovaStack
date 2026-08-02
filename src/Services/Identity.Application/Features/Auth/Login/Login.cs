@@ -45,7 +45,7 @@ internal sealed class LoginCommandHandler(
     IUnitOfWork unitOfWork,
     IPasswordHasher<User> passwordHasher,
     IJwtTokenService jwtTokenService,
-    IOptions<JwtOptions> jwtOptions)
+    IOptions<AuthenticationOptions> jwtOptions)
     : ICommandHandler<LoginCommand, TokenResponse>
 {
     public async Task<Result<TokenResponse>> Handle(LoginCommand command, CancellationToken ct)
@@ -70,7 +70,7 @@ internal sealed class LoginCommandHandler(
             RefreshTokenId.New(),
             rawRefreshToken,
             user.Id,
-            jwtOptions.Value.RefreshTokenExpiryDays);
+            jwtOptions.Value.RefreshToken.LifetimeDays);
 
         await refreshTokenRepository.AddAsync(refreshToken, ct);
         await unitOfWork.SaveChangesAsync(ct);
@@ -79,7 +79,7 @@ internal sealed class LoginCommandHandler(
             accessToken,
             rawRefreshToken,
             "Bearer",
-            jwtOptions.Value.ExpiryMinutes * 60,
+            jwtOptions.Value.AccessToken.LifetimeMinutes * 60,
             roleNames.AsReadOnly());
     }
 }
