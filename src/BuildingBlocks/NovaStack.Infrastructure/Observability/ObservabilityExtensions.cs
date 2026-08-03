@@ -49,10 +49,6 @@ public static class ObservabilityExtensions
                 {
                     tracing.AddOtlpExporter(opt => opt.Endpoint = new Uri(otlpEndpoint));
                 }
-                else
-                {
-                    tracing.AddConsoleExporter();
-                }
             })
             .WithMetrics(metrics =>
             {
@@ -60,6 +56,7 @@ public static class ObservabilityExtensions
                     .SetResourceBuilder(resourceBuilder)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
+                    .AddPrometheusExporter()
                     .AddRuntimeInstrumentation();
 
                 if (!string.IsNullOrWhiteSpace(otlpEndpoint))

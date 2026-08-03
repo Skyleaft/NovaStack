@@ -63,6 +63,7 @@ try
         options.MessageTemplate =
             "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000}ms";
     });
+    app.MapPrometheusScrapingEndpoint();
 
     if (app.Environment.IsDevelopment())
     {
