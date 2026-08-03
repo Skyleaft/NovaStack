@@ -43,9 +43,11 @@ public sealed class ValidationBehavior<TRequest, TResponse>(
         // Construct the failed Result<TResponse>
         var failedResult = typeof(TResponse) == typeof(Result)
             ? (TResponse)(object)Result.Failure(error)
-            : (TResponse)Activator.CreateInstance(
-                typeof(TResponse),
-                [null, false, error])!;
+            : (TResponse)typeof(Result)
+                .GetMethods()
+                .First(m => m.Name == nameof(Result.Failure) && m.IsGenericMethod)
+                .MakeGenericMethod(typeof(TResponse).GetGenericArguments()[0])
+                .Invoke(null, [error])!;
 
         return failedResult;
     }
