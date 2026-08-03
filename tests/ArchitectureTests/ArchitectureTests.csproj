@@ -27,9 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Services\Product.Domain\Product.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Services\Product.Application\Product.Application.csproj" />
-    <ProjectReference Include="..\..\src\Services\Product.Infrastructure\Product.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Services\Product\Product.Domain\Product.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Services\Product\Product.Application\Product.Application.csproj" />
+    <ProjectReference Include="..\..\src\Services\Product\Product.Infrastructure\Product.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
