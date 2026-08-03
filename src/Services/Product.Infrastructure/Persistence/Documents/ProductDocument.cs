@@ -38,4 +38,7 @@ public sealed class ProductDocument
 
     [BsonElement("updated_at")]
     public DateTime? UpdatedAt { get; set; }
+
+    [BsonElement("created_by")]
+    public string CreatedBy { get; set; } = string.Empty;
 }

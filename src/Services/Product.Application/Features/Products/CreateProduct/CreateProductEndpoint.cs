@@ -20,8 +20,8 @@ public sealed class CreateProductEndpoint : IEndpointDefinition
             .WithTags("Products")
             .Produces<ApiResponse<Guid>>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status409Conflict);
-            // .RequireAuthorization(); // Uncomment to enable auth
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequireAuthorization(); // Uncomment to enable auth
     }
 
     private static async Task<IResult> HandleAsync(

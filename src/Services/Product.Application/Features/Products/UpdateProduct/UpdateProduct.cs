@@ -68,7 +68,8 @@ public sealed class UpdateProductEndpoint : IEndpointDefinition
             .WithTags("Products")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .RequireAuthorization();
     }
 
     private static async Task<IResult> HandleAsync(

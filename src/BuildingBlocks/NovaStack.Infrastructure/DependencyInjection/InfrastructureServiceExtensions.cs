@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using NovaStack.Infrastructure.Authentication;
 using NovaStack.Infrastructure.Caching;
+using NovaStack.SharedKernel.Abstractions;
 using System.Text;
 
 namespace NovaStack.Infrastructure.DependencyInjection;
@@ -54,6 +55,9 @@ public static class InfrastructureServiceExtensions
             .AddJwtBearer();
 
         services.AddAuthorization();
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<IClaimService, ClaimService>();
 
         // Token generation service (used by Identity.Application handlers)
         services.AddScoped<IJwtTokenService, JwtTokenService>();

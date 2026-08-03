@@ -13,13 +13,15 @@ public sealed class CreateProductCommandHandlerTests
 {
     private readonly Mock<IProductRepository> _repositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+    private readonly Mock<IClaimService> _claimServiceMock = new();
     private readonly CreateProductCommandHandler _handler;
 
     public CreateProductCommandHandlerTests()
     {
         _handler = new CreateProductCommandHandler(
             _repositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _unitOfWorkMock.Object,
+            _claimServiceMock.Object);
     }
 
     [Fact]

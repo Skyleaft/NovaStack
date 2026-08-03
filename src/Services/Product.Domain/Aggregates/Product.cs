@@ -18,6 +18,7 @@ public sealed class Product : Entity<ProductId>
     public bool IsActive { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+    public string CreatedBy { get; private set; } = null!;
 
     // ── Constructor (EF Core) ─────────────────────────────────────────────
     private Product() : base() { }
@@ -28,10 +29,12 @@ public sealed class Product : Entity<ProductId>
         string name,
         string description,
         Money price,
-        int stockQuantity)
+        int stockQuantity,
+        string createdBy)
     {
         Guard.NotNullOrWhiteSpace(name, nameof(name));
         Guard.NotNull(price, nameof(price));
+        Guard.NotNullOrWhiteSpace(createdBy, nameof(createdBy));
 
         if (stockQuantity < 0)
             throw new DomainException("Stock quantity cannot be negative.");
@@ -44,7 +47,8 @@ public sealed class Product : Entity<ProductId>
             Price = price,
             StockQuantity = stockQuantity,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = createdBy
         };
 
         product.RaiseDomainEvent(new ProductCreatedDomainEvent(
@@ -66,7 +70,8 @@ public sealed class Product : Entity<ProductId>
         int stockQuantity,
         bool isActive,
         DateTime createdAt,
-        DateTime? updatedAt) => new()
+        DateTime? updatedAt,
+        string createdBy) => new()
     {
         Id = id,
         Name = name,
@@ -75,7 +80,8 @@ public sealed class Product : Entity<ProductId>
         StockQuantity = stockQuantity,
         IsActive = isActive,
         CreatedAt = createdAt,
-        UpdatedAt = updatedAt
+        UpdatedAt = updatedAt,
+        CreatedBy = createdBy
     };
 
 

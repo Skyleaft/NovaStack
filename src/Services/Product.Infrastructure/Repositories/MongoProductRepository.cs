@@ -119,7 +119,8 @@ internal sealed class MongoProductRepository(ProductMongoDbContext context) : IP
         StockQuantity = p.StockQuantity,
         IsActive = p.IsActive,
         CreatedAt = p.CreatedAt,
-        UpdatedAt = p.UpdatedAt
+        UpdatedAt = p.UpdatedAt,
+        CreatedBy = p.CreatedBy
     };
 
     private static DomainProduct MapToDomain(ProductDocument doc) =>
@@ -131,5 +132,6 @@ internal sealed class MongoProductRepository(ProductMongoDbContext context) : IP
             doc.StockQuantity,
             doc.IsActive,
             doc.CreatedAt,
-            doc.UpdatedAt);
+            doc.UpdatedAt,
+            doc.CreatedBy);
 }

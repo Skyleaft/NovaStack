@@ -12,7 +12,8 @@ public sealed record ProductResponse(
     int StockQuantity,
     bool IsActive,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    string CreatedBy);
 
 /// <summary>Query to retrieve a product by its ID.</summary>
 public sealed record GetProductByIdQuery(Guid Id) : IQuery<ProductResponse>;

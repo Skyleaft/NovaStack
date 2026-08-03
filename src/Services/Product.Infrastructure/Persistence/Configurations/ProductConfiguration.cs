@@ -47,6 +47,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<DomainProd
         builder.Property(p => p.UpdatedAt)
             .HasColumnName("updated_at");
 
+        builder.Property(p => p.CreatedBy)
+            .HasMaxLength(500)
+            .IsRequired()
+            .HasColumnName("created_by");
+
         // Money owned entity (mapped as columns)
         builder.OwnsOne(p => p.Price, money =>
         {
