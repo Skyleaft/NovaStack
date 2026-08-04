@@ -67,7 +67,7 @@ public sealed class ProductApiTests(ApiWebApplicationFactory factory)
     public async Task GET_Products_ById_NotFound_Returns404()
     {
         // Act
-        var response = await _client.GetAsync($"/api/v1/products/{Guid.NewGuid()}");
+        var response = await _client.GetAsync($"/api/v1/products/{Guid.CreateVersion7()}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);

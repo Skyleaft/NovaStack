@@ -28,7 +28,7 @@ public sealed class JwksTokenValidationTests : IDisposable
 
     public JwksTokenValidationTests()
     {
-        var runId = Guid.NewGuid().ToString("N");
+        var runId = Guid.CreateVersion7().ToString("N");
         _tempPrivateKeyPath = Path.Combine(AppContext.BaseDirectory, $"private_{runId}.pem");
         _tempPublicKeyPath = Path.Combine(AppContext.BaseDirectory, $"public_{runId}.pem");
     }
@@ -60,7 +60,7 @@ public sealed class JwksTokenValidationTests : IDisposable
 
         // Act
         var tokenString = tokenService.GenerateAccessToken(
-            userId: Guid.NewGuid(),
+            userId: Guid.CreateVersion7(),
             email: "test@novastack.local",
             roles: new[] { "Admin", "User" }
         );

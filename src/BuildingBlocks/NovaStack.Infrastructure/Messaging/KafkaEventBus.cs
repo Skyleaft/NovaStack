@@ -63,7 +63,7 @@ public sealed class KafkaEventBus : IEventBus, IDisposable
 
         var message = new Message<string, string>
         {
-            Key = Guid.NewGuid().ToString(),
+            Key = Guid.CreateVersion7().ToString(),
             Value = messageValue
         };
 

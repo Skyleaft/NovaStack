@@ -19,7 +19,7 @@ public sealed class OutboxMessage
     public static OutboxMessage Create(IDomainEvent domainEvent) =>
         new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             Type = domainEvent.GetType().AssemblyQualifiedName!,
             Payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
             CreatedAt = DateTime.UtcNow

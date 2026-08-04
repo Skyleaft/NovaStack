@@ -9,7 +9,7 @@ public sealed class RoleId : ValueObject
 
     private RoleId(Guid value) => Value = value;
 
-    public static RoleId New() => new(Guid.NewGuid());
+    public static RoleId New() => new(Guid.CreateVersion7());
 
     public static RoleId From(Guid value)
     {

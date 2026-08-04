@@ -7,6 +7,6 @@ public sealed record UserDeactivatedDomainEvent(
     Guid UserId,
     string Email) : IDomainEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
 }

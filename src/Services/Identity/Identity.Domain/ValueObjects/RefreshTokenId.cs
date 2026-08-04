@@ -9,7 +9,7 @@ public sealed class RefreshTokenId : ValueObject
 
     private RefreshTokenId(Guid value) => Value = value;
 
-    public static RefreshTokenId New() => new(Guid.NewGuid());
+    public static RefreshTokenId New() => new(Guid.CreateVersion7());
 
     public static RefreshTokenId From(Guid value)
     {

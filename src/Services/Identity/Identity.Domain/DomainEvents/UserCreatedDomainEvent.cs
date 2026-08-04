@@ -10,6 +10,6 @@ public sealed record UserCreatedDomainEvent(
     string LastName,
     DateTime OccurredAt) : IDomainEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
 }

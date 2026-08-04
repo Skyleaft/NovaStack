@@ -8,7 +8,7 @@ public sealed record UserRegisteredIntegrationEvent(
     string LastName,
     DateTime RegisteredAt) : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType => nameof(UserRegisteredIntegrationEvent);
 }
@@ -22,7 +22,7 @@ public sealed record UserRoleChangedIntegrationEvent(
     string ChangedRole,
     DateTime ChangedAt) : IIntegrationEvent
 {
-    public Guid EventId { get; init; } = Guid.NewGuid();
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
     public string EventType => nameof(UserRoleChangedIntegrationEvent);
 }

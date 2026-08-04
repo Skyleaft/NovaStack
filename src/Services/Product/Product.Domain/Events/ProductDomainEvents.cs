@@ -13,7 +13,7 @@ public sealed record ProductCreatedDomainEvent(
 ) : IDomainEvent
 {
     public ProductCreatedDomainEvent(Guid productId, string name, decimal price, string currency)
-        : this(Guid.NewGuid(), DateTime.UtcNow, productId, name, price, currency)
+        : this(Guid.CreateVersion7(), DateTime.UtcNow, productId, name, price, currency)
     {
     }
 }
@@ -29,7 +29,7 @@ public sealed record ProductUpdatedDomainEvent(
 ) : IDomainEvent
 {
     public ProductUpdatedDomainEvent(Guid productId, string name, decimal price, string currency)
-        : this(Guid.NewGuid(), DateTime.UtcNow, productId, name, price, currency)
+        : this(Guid.CreateVersion7(), DateTime.UtcNow, productId, name, price, currency)
     {
     }
 }
@@ -42,7 +42,7 @@ public sealed record ProductDeletedDomainEvent(
 ) : IDomainEvent
 {
     public ProductDeletedDomainEvent(Guid productId)
-        : this(Guid.NewGuid(), DateTime.UtcNow, productId)
+        : this(Guid.CreateVersion7(), DateTime.UtcNow, productId)
     {
     }
 }

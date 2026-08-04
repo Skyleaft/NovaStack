@@ -9,7 +9,7 @@ public sealed class UserId : ValueObject
 
     private UserId(Guid value) => Value = value;
 
-    public static UserId New() => new(Guid.NewGuid());
+    public static UserId New() => new(Guid.CreateVersion7());
 
     public static UserId From(Guid value)
     {

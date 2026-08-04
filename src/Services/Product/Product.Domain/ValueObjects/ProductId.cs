@@ -14,7 +14,7 @@ public sealed class ProductId : ValueObject
 
     public static ProductId New()
     {
-        return new ProductId(Guid.NewGuid());
+        return new ProductId(Guid.CreateVersion7());
     }
 
     public static ProductId From(Guid value)
