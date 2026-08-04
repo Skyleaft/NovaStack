@@ -37,7 +37,9 @@ public sealed class JwtTokenService : IJwtTokenService
         }
         else
         {
-            var secretKey = "default_dev_key_please_change_me_32chars!";
+            var secretKey = string.IsNullOrWhiteSpace(_opts.Signing.SymmetricKey)
+                ? "default_dev_key_please_change_me_32chars!"
+                : _opts.Signing.SymmetricKey;
             _symmetricSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         }
     }

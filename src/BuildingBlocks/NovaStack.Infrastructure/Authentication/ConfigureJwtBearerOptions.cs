@@ -44,7 +44,7 @@ public sealed class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearer
             ClockSkew = TimeSpan.Zero
         };
 
-        var isClient = !string.IsNullOrWhiteSpace(_opts.Authority);
+        var isClient = !string.IsNullOrWhiteSpace(_opts.Authority) && !_opts.UseLocalValidation;
 
         if (isClient)
         {
@@ -56,7 +56,7 @@ public sealed class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearer
         }
         else
         {
-            // Identity VSA: Resolve from local RSA keys
+            // Identity VSA / Local validation: Resolve from local RSA keys
             var isRsa = string.Equals(_opts.Signing.Algorithm, "RS256", StringComparison.OrdinalIgnoreCase);
             if (isRsa)
             {
@@ -74,7 +74,9 @@ public sealed class ConfigureJwtBearerOptions : IConfigureNamedOptions<JwtBearer
             else
             {
                 // Fallback to symmetric signing key
-                var secretKey = "default_dev_key_please_change_me_32chars!";
+                var secretKey = string.IsNullOrWhiteSpace(_opts.Signing.SymmetricKey)
+                    ? "default_dev_key_please_change_me_32chars!"
+                    : _opts.Signing.SymmetricKey;
                 options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secretKey));
             }
         }

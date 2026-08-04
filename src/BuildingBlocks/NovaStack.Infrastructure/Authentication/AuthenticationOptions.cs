@@ -15,6 +15,9 @@ public sealed class AuthenticationOptions
     public bool RequireHttps { get; set; } = false;
     public int CacheMinutes { get; set; } = 60;
 
+    // Set to true to validate JWT tokens locally without an external Identity authority
+    public bool UseLocalValidation { get; set; } = false;
+
     // RSA/Symmetric Signing Settings
     public SigningOptions Signing { get; set; } = new();
 
@@ -33,6 +36,7 @@ public sealed class SigningOptions
     public string PrivateKeyPath { get; set; } = string.Empty;
     public string PublicKeyPath { get; set; } = string.Empty;
     public string KeyId { get; set; } = string.Empty;
+    public string SymmetricKey { get; set; } = string.Empty;
 }
 
 /// <summary>Options for Access Token configuration.</summary>

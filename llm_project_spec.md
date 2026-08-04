@@ -606,6 +606,23 @@ POST /api/v1/auth/refresh
 }
 ```
 
+### Standalone Service JWT Validation (without Identity Service)
+
+To run a microservice (such as `Product.Api`) as a standalone service validating JWTs locally (avoiding external JWKS lookup to Identity Service), configure its `appsettings.json` Authentication section as follows:
+
+```json
+"Authentication": {
+  "Issuer": "NovaStack",
+  "Audience": "product-api",
+  "RequireHttps": false,
+  "UseLocalValidation": true,
+  "Signing": {
+    "Algorithm": "HS256",
+    "SymmetricKey": "CHANGE_ME_super_secret_key_at_least_32_chars!"
+  }
+}
+```
+
 ### Run Identity API
 
 ```bash

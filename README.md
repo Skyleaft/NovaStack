@@ -190,6 +190,23 @@ All behavior is driven by `appsettings.json`. No code changes required to switch
 
 > The `OpenId.Authority` is used to build the discovery document URLs. Leave empty to auto-detect from the current request host.
 
+### Standalone Service JWT Validation (without Identity Service)
+
+To run a microservice (e.g., `Product.Api`) in JWT-only validation mode without calling the external OIDC/Identity service, configure the `Authentication` section in its `appsettings.json` to use local validation with a symmetric or asymmetric key:
+
+```json
+"Authentication": {
+  "Issuer": "NovaStack",
+  "Audience": "product-api",
+  "RequireHttps": false,
+  "UseLocalValidation": true,
+  "Signing": {
+    "Algorithm": "HS256",
+    "SymmetricKey": "CHANGE_ME_super_secret_key_at_least_32_chars!"
+  }
+}
+```
+
 ---
 
 ## 🔌 Product API Endpoints
