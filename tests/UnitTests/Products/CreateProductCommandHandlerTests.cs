@@ -1,10 +1,10 @@
 using FluentAssertions;
 using Moq;
 using NovaStack.SharedKernel.Abstractions;
-using Product.Application.Features.Products.CreateProduct;
-using Product.Domain.Repositories;
+using Product.Core.Features.Products.CreateProduct;
+using Product.Core.Domain.Repositories;
 using Xunit;
-using DomainProduct = Product.Domain.Aggregates.Product;
+using DomainProduct = Product.Core.Domain.Aggregates.Product;
 
 namespace UnitTests.Products;
 

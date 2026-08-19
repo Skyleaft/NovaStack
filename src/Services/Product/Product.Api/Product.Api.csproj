@@ -19,9 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Product.Application\Product.Application.csproj"/>
-        <ProjectReference Include="..\Product.Infrastructure\Product.Infrastructure.csproj"/>
-        <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj"/>
+        <ProjectReference Include="..\Product.Core\Product.Core.csproj"/>
     </ItemGroup>
 
 </Project>

@@ -3,8 +3,8 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using IntegrationTests.Fixtures;
 using NovaStack.Contracts.Responses;
-using Product.Application.Features.Products.CreateProduct;
-using Product.Application.Features.Products.GetProductById;
+using Product.Core.Features.Products.CreateProduct;
+using Product.Core.Features.Products.GetProductById;
 using Xunit;
 
 namespace IntegrationTests.Products;

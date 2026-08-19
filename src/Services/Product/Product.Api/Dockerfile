@@ -11,16 +11,14 @@ COPY ["NovaStack.sln", "./"]
 COPY ["src/BuildingBlocks/NovaStack.SharedKernel/NovaStack.SharedKernel.csproj", "src/BuildingBlocks/NovaStack.SharedKernel/"]
 COPY ["src/BuildingBlocks/NovaStack.Infrastructure/NovaStack.Infrastructure.csproj", "src/BuildingBlocks/NovaStack.Infrastructure/"]
 COPY ["src/BuildingBlocks/NovaStack.Contracts/NovaStack.Contracts.csproj", "src/BuildingBlocks/NovaStack.Contracts/"]
-COPY ["src/Services/Product.Domain/Product.Domain.csproj", "src/Services/Product.Domain/"]
-COPY ["src/Services/Product.Application/Product.Application.csproj", "src/Services/Product.Application/"]
-COPY ["src/Services/Product.Infrastructure/Product.Infrastructure.csproj", "src/Services/Product.Infrastructure/"]
-COPY ["src/Services/Product.Api/Product.Api.csproj", "src/Services/Product.Api/"]
+COPY ["src/Services/Product/Product.Core/Product.Core.csproj", "src/Services/Product/Product.Core/"]
+COPY ["src/Services/Product/Product.Api/Product.Api.csproj", "src/Services/Product/Product.Api/"]
 
-RUN dotnet restore "src/Services/Product.Api/Product.Api.csproj"
+RUN dotnet restore "src/Services/Product/Product.Api/Product.Api.csproj"
 
 # Copy the rest and build
 COPY . .
-WORKDIR /src/src/Services/Product.Api
+WORKDIR /src/src/Services/Product/Product.Api
 RUN dotnet publish "Product.Api.csproj" -c Release -o /app/publish --no-restore
 
 # Stage 2: Runtime
