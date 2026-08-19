@@ -11,16 +11,14 @@ COPY ["NovaStack.sln", "./"]
 COPY ["src/BuildingBlocks/NovaStack.SharedKernel/NovaStack.SharedKernel.csproj", "src/BuildingBlocks/NovaStack.SharedKernel/"]
 COPY ["src/BuildingBlocks/NovaStack.Infrastructure/NovaStack.Infrastructure.csproj", "src/BuildingBlocks/NovaStack.Infrastructure/"]
 COPY ["src/BuildingBlocks/NovaStack.Contracts/NovaStack.Contracts.csproj", "src/BuildingBlocks/NovaStack.Contracts/"]
-COPY ["src/Services/Identity.Domain/Identity.Domain.csproj", "src/Services/Identity.Domain/"]
-COPY ["src/Services/Identity.Application/Identity.Application.csproj", "src/Services/Identity.Application/"]
-COPY ["src/Services/Identity.Infrastructure/Identity.Infrastructure.csproj", "src/Services/Identity.Infrastructure/"]
-COPY ["src/Services/Identity.Api/Identity.Api.csproj", "src/Services/Identity.Api/"]
+COPY ["src/Services/Identity/Identity.Core/Identity.Core.csproj", "src/Services/Identity/Identity.Core/"]
+COPY ["src/Services/Identity/Identity.Api/Identity.Api.csproj", "src/Services/Identity/Identity.Api/"]
 
-RUN dotnet restore "src/Services/Identity.Api/Identity.Api.csproj"
+RUN dotnet restore "src/Services/Identity/Identity.Api/Identity.Api.csproj"
 
 # Copy the rest and build
 COPY . .
-WORKDIR /src/src/Services/Identity.Api
+WORKDIR /src/src/Services/Identity/Identity.Api
 RUN dotnet publish "Identity.Api.csproj" -c Release -o /app/publish --no-restore
 
 # Stage 2: Runtime

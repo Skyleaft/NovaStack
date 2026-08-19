@@ -1,6 +1,5 @@
-using Identity.Application.DependencyInjection;
-using Identity.Infrastructure.DependencyInjection;
-using Identity.Infrastructure.Seeding;
+using Identity.Core.DependencyInjection;
+using Identity.Core.Seeding;
 using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
@@ -34,11 +33,8 @@ try
         serviceName: "Identity.Api",
         otlpEndpoint: builder.Configuration["Observability:OtlpEndpoint"]);
 
-    // ── Application Layer ─────────────────────────────────────────────────
-    builder.Services.AddIdentityApplication();
-
-    // ── Infrastructure Layer ──────────────────────────────────────────────
-    builder.Services.AddIdentityInfrastructure(builder.Configuration);
+    // ── Identity Core Layer ───────────────────────────────────────────────
+    builder.Services.AddIdentityCore(builder.Configuration);
 
     // ── Authorization Policies ────────────────────────────────────────────
     builder.Services.AddAuthorization(options =>

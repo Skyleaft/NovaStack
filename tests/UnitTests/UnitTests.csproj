@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\Product\Product.Core\Product.Core.csproj" />
+    <ProjectReference Include="..\..\src\Services\Identity\Identity.Core\Identity.Core.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\NovaStack.SharedKernel\NovaStack.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj" />
   </ItemGroup>
