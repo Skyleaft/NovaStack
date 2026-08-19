@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="UnitTests"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.SharedKernel\NovaStack.SharedKernel.csproj"/>
+        <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Contracts\NovaStack.Contracts.csproj"/>
+        <ProjectReference Include="..\..\..\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- CQRS + Validation -->
+        <PackageReference Include="MediatR" Version="14.2.0"/>
+        <PackageReference Include="FluentValidation" Version="12.1.1"/>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1"/>
+        <!-- Object Mapping -->
+        <PackageReference Include="Mapster" Version="10.0.11"/>
+        <!-- High-performance read queries -->
+        <PackageReference Include="Dapper" Version="2.1.79"/>
+        <!-- EF Core (relational providers) -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10"/>
+    </ItemGroup>
+
+</Project>

@@ -50,12 +50,12 @@ NovaStack/
 │   │   └── NovaStack.Contracts/           # Integration events, API response shapes
 │   │
 │   └── Services/
-│       ├── Product.Core/                  # VSA slices, DDD Domain, Repositories, EF DbContext, Migrations
-│       ├── Product.Api/                   # Minimal API host, composition root, Dockerfile
-│       ├── Identity.Domain/               # User/Role/RefreshToken aggregates, RBAC Permission VO
-│       ├── Identity.Application/          # 16 VSA slices: Auth, OIDC, Users, Roles
-│       ├── Identity.Infrastructure/       # EF Core IdentityDbContext (identity schema), repositories
-│       └── Identity.Api/                  # OIDC + Auth host (port 5010), Dockerfile
+│       ├── Product/
+│       │   ├── Product.Core/              # VSA slices, DDD Domain, Repositories, EF DbContext, Migrations
+│       │   └── Product.Api/               # Minimal API host, composition root, Dockerfile
+│       └── Identity/
+│           ├── Identity.Core/             # VSA slices (Auth, OIDC, Users, Roles), DDD Domain, EF DbContext, Migrations
+│           └── Identity.Api/              # OIDC + Auth host (port 5010), Dockerfile
 │
 ├── src/Workers/
 │   ├── Product.Consumer/                  # MassTransit worker (RabbitMQ or Kafka)
@@ -94,7 +94,7 @@ cd src/Services/Product/Product.Api
 dotnet run
 
 # Identity API (port 5010)
-cd src/Services/Identity.Api
+cd src/Services/Identity/Identity.Api
 dotnet run
 ```
 

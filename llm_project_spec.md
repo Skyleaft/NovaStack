@@ -32,8 +32,12 @@ NovaStack/
 │   │   └── NovaStack.Contracts/           # Inter-service schemas: Integration events, ApiResponse shapes
 │   │
 │   └── Services/
-│       ├── Product.Core/                  # VSA slices, DDD Domain, Repositories, EF DbContext, Migrations
-│       └── Product.Api/                   # Composition root, Program.cs, config, Dockerfile
+│       ├── Product/
+│       │   ├── Product.Core/              # VSA slices, DDD Domain, Repositories, EF DbContext, Migrations
+│       │   └── Product.Api/               # Composition root, Program.cs, config, Dockerfile
+│       └── Identity/
+│           ├── Identity.Core/             # VSA slices (Auth, OIDC, Users, Roles), DDD Domain, EF DbContext, Migrations
+│           └── Identity.Api/              # OIDC + Auth composition root, Program.cs, Dockerfile
 │
 ├── src/Workers/
 │   ├── Product.Consumer/                  # Background service consumer (handles integration events)

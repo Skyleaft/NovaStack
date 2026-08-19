@@ -1,0 +1,12 @@
+using NovaStack.SharedKernel.Abstractions;
+
+namespace Identity.Core.Domain.DomainEvents;
+
+/// <summary>Raised when a User aggregate is deactivated (soft-delete).</summary>
+public sealed record UserDeactivatedDomainEvent(
+    Guid UserId,
+    string Email) : IDomainEvent
+{
+    public Guid EventId { get; init; } = Guid.CreateVersion7();
+    public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
+}

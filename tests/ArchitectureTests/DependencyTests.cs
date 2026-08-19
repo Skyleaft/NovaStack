@@ -10,7 +10,8 @@ namespace ArchitectureTests;
 /// </summary>
 public sealed class DependencyTests
 {
-    private const string CoreAssembly = "Product.Core";
+    private const string ProductCoreAssembly = "Product.Core";
+    private const string IdentityCoreAssembly = "Identity.Core";
     private const string SharedKernelAssembly = "NovaStack.SharedKernel";
     private const string InfrastructureBBAssembly = "NovaStack.Infrastructure";
 
@@ -19,7 +20,7 @@ public sealed class DependencyTests
     {
         var result = Types.InAssembly(typeof(NovaStack.SharedKernel.Results.Error).Assembly)
             .ShouldNot()
-            .HaveDependencyOnAny(CoreAssembly)
+            .HaveDependencyOnAny(ProductCoreAssembly, IdentityCoreAssembly)
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
@@ -27,7 +28,7 @@ public sealed class DependencyTests
     }
 
     [Fact]
-    public void CommandHandlers_Should_BeInternal_And_Sealed()
+    public void Product_CommandHandlers_Should_BeInternal_And_Sealed()
     {
         var result = Types.InAssembly(typeof(Product.Core.Features.Products.CreateProduct.CreateProductCommand).Assembly)
             .That()
@@ -37,11 +38,11 @@ public sealed class DependencyTests
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            "All command handlers should be sealed to prevent inheritance.");
+            "All product command handlers should be sealed to prevent inheritance.");
     }
 
     [Fact]
-    public void QueryHandlers_Should_BeInternal_And_Sealed()
+    public void Product_QueryHandlers_Should_BeInternal_And_Sealed()
     {
         var result = Types.InAssembly(typeof(Product.Core.Features.Products.CreateProduct.CreateProductCommand).Assembly)
             .That()
@@ -51,6 +52,34 @@ public sealed class DependencyTests
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            "All query handlers should be sealed to prevent inheritance.");
+            "All product query handlers should be sealed to prevent inheritance.");
+    }
+
+    [Fact]
+    public void Identity_CommandHandlers_Should_BeInternal_And_Sealed()
+    {
+        var result = Types.InAssembly(typeof(Identity.Core.Features.Auth.Login.LoginCommand).Assembly)
+            .That()
+            .HaveNameEndingWith("CommandHandler")
+            .Should()
+            .BeSealed()
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(
+            "All identity command handlers should be sealed to prevent inheritance.");
+    }
+
+    [Fact]
+    public void Identity_QueryHandlers_Should_BeInternal_And_Sealed()
+    {
+        var result = Types.InAssembly(typeof(Identity.Core.Features.Auth.Login.LoginCommand).Assembly)
+            .That()
+            .HaveNameEndingWith("QueryHandler")
+            .Should()
+            .BeSealed()
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(
+            "All identity query handlers should be sealed to prevent inheritance.");
     }
 }
