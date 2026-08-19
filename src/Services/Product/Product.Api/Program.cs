@@ -2,8 +2,7 @@ using NovaStack.Infrastructure.DependencyInjection;
 using NovaStack.Infrastructure.Logging;
 using NovaStack.Infrastructure.Observability;
 using NovaStack.Infrastructure.Persistence.Options;
-using Product.Application.DependencyInjection;
-using Product.Infrastructure.DependencyInjection;
+using Product.Core.DependencyInjection;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -33,12 +32,9 @@ try
         "Product.Api",
         otlpEndpoint: builder.Configuration["Observability:OtlpEndpoint"]);
 
-    // ── Application Layer (MediatR, FluentValidation, Pipeline behaviors) ────
-    builder.Services.AddProductApplication();
-    builder.Services.AddNovaStackMappings(typeof(ApplicationExtensions).Assembly);
-
-    // ── Infrastructure Layer (EF Core, Repos, MassTransit) ──────────────────
-    builder.Services.AddProductInfrastructure(builder.Configuration);
+    // ── Product Core (VSA Features, Domain, Persistence, Messaging) ─────────
+    builder.Services.AddProductCore(builder.Configuration);
+    builder.Services.AddNovaStackMappings(typeof(ProductCoreExtensions).Assembly);
 
     // ── CORS ─────────────────────────────────────────────────────────────────
     builder.Services.AddCors(options =>
@@ -77,7 +73,7 @@ try
     app.UseAuthorization();
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
-    // Scan Product.Application assembly for all IEndpointDefinition implementations
+    // Scan Product.Core assembly for all IEndpointDefinition implementations
     app.MapProductEndpoints();
 
     // Health checks

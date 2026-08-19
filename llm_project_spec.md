@@ -32,9 +32,7 @@ NovaStack/
 │   │   └── NovaStack.Contracts/           # Inter-service schemas: Integration events, ApiResponse shapes
 │   │
 │   └── Services/
-│       ├── Product.Domain/                # Aggregate roots, ValueObjects, Domain Events, Repositories interfaces
-│       ├── Product.Application/           # CQRS vertical slices (Command/Query/Validator/Endpoint)
-│       ├── Product.Infrastructure/        # EF DbContext, Repository impls, migrations, Dapper SqlConnectionFactory
+│       ├── Product.Core/                  # VSA slices, DDD Domain, Repositories, EF DbContext, Migrations
 │       └── Product.Api/                   # Composition root, Program.cs, config, Dockerfile
 │
 ├── src/Workers/
@@ -54,7 +52,7 @@ NovaStack/
 LLMs must follow these specific templates and patterns when adding new code.
 
 ### 1. Vertical Slice Architecture (VSA)
-Features are placed inside self-contained folders in `Product.Application/Features/[FeatureName]/[CommandOrQuery]`. Each slice contains:
+Features are placed inside self-contained folders in `Product.Core/Features/[FeatureName]/[CommandOrQuery]`. Each slice contains:
 - `Command` or `Query` record
 - `CommandHandler` or `QueryHandler` (`internal sealed`, primary constructors)
 - `Validator` class (FluentValidation)
@@ -63,9 +61,9 @@ Features are placed inside self-contained folders in `Product.Application/Featur
 #### Command Vertical Slice Skeleton:
 ```csharp
 // Features/Products/CreateProduct/CreateProductCommand.cs
-using Product.Application.Common.Abstractions;
+using Product.Core.Common.Abstractions;
 
-namespace Product.Application.Features.Products.CreateProduct;
+namespace Product.Core.Features.Products.CreateProduct;
 
 public sealed record CreateProductCommand(
     string Name,
@@ -78,16 +76,17 @@ public sealed record CreateProductCommand(
 // Features/Products/CreateProduct/CreateProductCommandHandler.cs
 using NovaStack.SharedKernel.Abstractions;
 using NovaStack.SharedKernel.Results;
-using Product.Application.Common.Abstractions;
-using Product.Domain.Repositories;
-using Product.Domain.ValueObjects;
-using DomainProduct = Product.Domain.Aggregates.Product;
+using Product.Core.Common.Abstractions;
+using Product.Core.Domain.Repositories;
+using Product.Core.Domain.ValueObjects;
+using DomainProduct = Product.Core.Domain.Aggregates.Product;
 
-namespace Product.Application.Features.Products.CreateProduct;
+namespace Product.Core.Features.Products.CreateProduct;
 
 internal sealed class CreateProductCommandHandler(
     IProductRepository productRepository,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IClaimService claimService)
     : ICommandHandler<CreateProductCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(CreateProductCommand command, CancellationToken ct)
@@ -95,12 +94,15 @@ internal sealed class CreateProductCommandHandler(
         if (await productRepository.ExistsByNameAsync(command.Name, ct))
             return Error.Conflict("Product.NameConflict", $"Product '{command.Name}' already exists.");
 
+        var createdBy = claimService.GetCurrentUserId() ?? "System";
+
         var product = DomainProduct.Create(
             ProductId.New(),
             command.Name,
             command.Description,
             Money.Create(command.Price, command.Currency),
-            command.StockQuantity);
+            command.StockQuantity,
+            createdBy);
 
         await productRepository.AddAsync(product, ct);
         await unitOfWork.SaveChangesAsync(ct);
@@ -112,7 +114,7 @@ internal sealed class CreateProductCommandHandler(
 // Features/Products/CreateProduct/CreateProductCommandValidator.cs
 using FluentValidation;
 
-namespace Product.Application.Features.Products.CreateProduct;
+namespace Product.Core.Features.Products.CreateProduct;
 
 public sealed class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
 {
@@ -131,9 +133,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NovaStack.Contracts.Responses;
 using NovaStack.SharedKernel.Results;
-using Product.Application.Common.Abstractions;
+using Product.Core.Common.Abstractions;
 
-namespace Product.Application.Features.Products.CreateProduct;
+namespace Product.Core.Features.Products.CreateProduct;
 
 public sealed class CreateProductEndpoint : IEndpointDefinition
 {
@@ -172,23 +174,26 @@ Domain entities inherit from `Entity<TId>` (which implements `IEntity<TId>`, `IA
 ```csharp
 using NovaStack.SharedKernel.Common;
 using NovaStack.SharedKernel.Exceptions;
+using Product.Core.Domain.Events;
+using Product.Core.Domain.ValueObjects;
 
-namespace Product.Domain.Aggregates;
+namespace Product.Core.Domain.Aggregates;
 
 public sealed class Product : Entity<ProductId>
 {
     public string Name { get; private set; } = null!;
     public Money Price { get; private set; } = null!;
+    public string CreatedBy { get; private set; } = null!;
     
     private Product() : base() { } // Required for EF Core
 
-    public static Product Create(ProductId id, string name, Money price)
+    public static Product Create(ProductId id, string name, string description, Money price, int stockQuantity, string createdBy)
     {
         Guard.NotNullOrWhiteSpace(name, nameof(name));
         Guard.NotNull(price, nameof(price));
 
-        var product = new Product { Id = id, Name = name, Price = price };
-        product.RaiseDomainEvent(new ProductCreatedDomainEvent(id.Value, name));
+        var product = new Product { Id = id, Name = name, Price = price, CreatedBy = createdBy };
+        product.RaiseDomainEvent(new ProductCreatedDomainEvent(id.Value, name, price.Amount, price.Currency));
         return product;
     }
 }
@@ -201,9 +206,9 @@ Avoid EF Core for complex read-only queries (e.g. search, pagination, stock repo
 using Dapper;
 using NovaStack.SharedKernel.Results;
 using NovaStack.SharedKernel.Abstractions;
-using Product.Application.Common.Abstractions;
+using Product.Core.Common.Abstractions;
 
-namespace Product.Application.Features.Products.GetProductStockReport;
+namespace Product.Core.Features.Products.GetProductStockReport;
 
 public record GetProductStockReportQuery() : IQuery<ProductStockReportResponse>;
 
@@ -221,7 +226,7 @@ internal sealed class GetProductStockReportQueryHandler(ISqlConnectionFactory sq
             WHERE is_active = true";
 
         var stats = await connection.QuerySingleOrDefaultAsync<ProductStockReportResponse>(sql);
-        return stats ?? new ProductStockReportResponse(0, 0);
+        return stats ?? new ProductStockReportResponse(0, 0, 0, 0, []);
     }
 }
 ```
@@ -315,7 +320,7 @@ public abstract class MongoDbContextBase : IMongoDbContext
 #### Service-specific context & document POCO
 
 ```csharp
-// Product.Infrastructure/Persistence/Documents/ProductDocument.cs
+// Product.Core/Persistence/Documents/ProductDocument.cs
 public sealed class ProductDocument
 {
     [BsonId, BsonRepresentation(BsonType.String)]
@@ -326,7 +331,7 @@ public sealed class ProductDocument
     // ... other fields
 }
 
-// Product.Infrastructure/Persistence/ProductMongoDbContext.cs
+// Product.Core/Persistence/ProductMongoDbContext.cs
 public sealed class ProductMongoDbContext(IMongoClient client, string dbName)
     : MongoDbContextBase(client, dbName)
 {
@@ -338,7 +343,7 @@ public sealed class ProductMongoDbContext(IMongoClient client, string dbName)
 #### Repository skeleton
 
 ```csharp
-// Product.Infrastructure/Repositories/MongoProductRepository.cs
+// Product.Core/Repositories/MongoProductRepository.cs
 internal sealed class MongoProductRepository(ProductMongoDbContext context) : IProductRepository
 {
     private readonly IMongoCollection<ProductDocument> _collection = context.Products;
@@ -365,7 +370,7 @@ internal sealed class MongoProductRepository(ProductMongoDbContext context) : IP
 }
 ```
 
-#### DI registration (`InfrastructureExtensions.cs`)
+#### DI registration (`ProductCoreExtensions.cs`)
 
 ```csharp
 // MongoDB branch (no EF Core, no UoW, no SQL factory)
@@ -388,7 +393,7 @@ services.AddScoped<IProductRepository>(sp =>
 ### 8. UpdateProduct — Edit Vertical Slice Example
 
 This is a complete, **real** example from the codebase at
-`Product.Application/Features/Products/UpdateProduct/UpdateProduct.cs`.
+`Product.Core/Features/Products/UpdateProduct/UpdateProduct.cs`.
 
 ```csharp
 // ── Command ──────────────────────────────────────────────────────────────────
@@ -487,7 +492,7 @@ public sealed record UpdateProductRequest(
 - **DO** use EF Core database interceptors/Outbox for transaction boundary synchronization.
 - **DO NOT** register endpoints manually in `Program.cs`. Implementing `IEndpointDefinition` allows them to be scanned and registered automatically.
 - **DO NOT** write unit tests with real databases. Use Mocking (`Moq`) for repositories, and verify execution flows.
-- **DO** run `ArchitectureTests` to verify dependency directions (Domain ➔ Application ➔ Infrastructure).
+- **DO** run `ArchitectureTests` to verify dependency directions.
 
 ---
 
@@ -495,15 +500,15 @@ public sealed record UpdateProductRequest(
 
 ### Run Applications
 - Start DB and services: `docker-compose up postgres rabbitmq redis -d`
-- Run API: `cd src/Services/Product.Api && dotnet run`
+- Run API: `cd src/Services/Product/Product.Api && dotnet run`
 
 ### Run Migration Commands
 ```bash
 # Add a migration
-dotnet ef migrations add [MigrationName] --project src/Services/Product.Infrastructure --startup-project src/Services/Product.Api --output-dir Persistence/Migrations
+dotnet ef migrations add [MigrationName] --project src/Services/Product/Product.Core --startup-project src/Services/Product/Product.Api --output-dir Persistence/Migrations
 
 # Update Database
-dotnet ef database update --project src/Services/Product.Infrastructure --startup-project src/Services/Product.Api
+dotnet ef database update --project src/Services/Product/Product.Core --startup-project src/Services/Product/Product.Api
 ```
 
 ### Run Tests

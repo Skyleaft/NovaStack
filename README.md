@@ -50,9 +50,7 @@ NovaStack/
 │   │   └── NovaStack.Contracts/           # Integration events, API response shapes
 │   │
 │   └── Services/
-│       ├── Product.Domain/                # Aggregate, ValueObjects, Domain Events, Repository interface
-│       ├── Product.Application/           # CQRS vertical slices, pipeline behaviors, endpoint definitions
-│       ├── Product.Infrastructure/        # EF Core DbContext, Repository impl, Native Messaging wiring
+│       ├── Product.Core/                  # VSA slices, DDD Domain, Repositories, EF DbContext, Migrations
 │       ├── Product.Api/                   # Minimal API host, composition root, Dockerfile
 │       ├── Identity.Domain/               # User/Role/RefreshToken aggregates, RBAC Permission VO
 │       ├── Identity.Application/          # 16 VSA slices: Auth, OIDC, Users, Roles
@@ -92,7 +90,7 @@ docker-compose up postgres rabbitmq redis -d
 
 ```bash
 # Product API (port 5191 / 5000 in Docker)
-cd src/Services/Product.Api
+cd src/Services/Product/Product.Api
 dotnet run
 
 # Identity API (port 5010)
@@ -352,7 +350,7 @@ public class GetProductByIdQueryHandler(IProductRepository repo, IMapper mapper)
 
 ### Edit (UpdateProduct) Vertical Slice Example
 
-Demonstrates a `PUT` command that returns `204 No Content` on success, matching the pattern in `Product.Application/Features/Products/UpdateProduct/UpdateProduct.cs`:
+Demonstrates a `PUT` command that returns `204 No Content` on success, matching the pattern in `Product.Core/Features/Products/UpdateProduct/UpdateProduct.cs`:
 
 ```csharp
 // ICommand (no return type) → handler returns Result (not Result<T>)
@@ -442,14 +440,14 @@ dotnet test tests/IntegrationTests
 ```bash
 # Add a migration
 dotnet ef migrations add InitialCreate \
-  --project src/Services/Product.Infrastructure \
-  --startup-project src/Services/Product.Api \
+  --project src/Services/Product/Product.Core \
+  --startup-project src/Services/Product/Product.Api \
   --output-dir Persistence/Migrations
 
 # Apply manually
 dotnet ef database update \
-  --project src/Services/Product.Infrastructure \
-  --startup-project src/Services/Product.Api
+  --project src/Services/Product/Product.Core \
+  --startup-project src/Services/Product/Product.Api
 ```
 
 > **Auto-migrate on startup** is enabled by default (`"AutoMigrate": true`). Disable in production if you prefer manual migration runs.
@@ -490,10 +488,10 @@ The `docker-compose.yml` brings up the full stack:
 
 ### Add a new service (e.g., Order service)
 
-1. Create `Order.Domain`, `Order.Application`, `Order.Infrastructure`, `Order.Api` projects
-2. Add project references following the same pattern
-3. Register `IEndpointDefinition` implementations in the new API's `Program.cs`
-4. Add to `docker-compose.yml`
+1. Create `Order.Core` and `Order.Api` projects (Two-Tier VSA + DDD pattern)
+2. In `Order.Core`, implement your domain models, VSA feature slices, repositories, and `OrderDbContext`
+3. Expose `AddOrderCore()` and `MapOrderEndpoints()` extension methods
+4. In `Order.Api`, call them inside `Program.cs` and add to `docker-compose.yml`
 
 ### Scalar API UI Integration
 

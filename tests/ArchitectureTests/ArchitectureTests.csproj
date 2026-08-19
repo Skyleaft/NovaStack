@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -27,9 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Services\Product\Product.Domain\Product.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Services\Product\Product.Application\Product.Application.csproj" />
-    <ProjectReference Include="..\..\src\Services\Product\Product.Infrastructure\Product.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Services\Product\Product.Core\Product.Core.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\NovaStack.SharedKernel\NovaStack.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\NovaStack.Infrastructure\NovaStack.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
